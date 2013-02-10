@@ -1,0 +1,40 @@
+// Profiler1.idl : IDL source for Profiler1
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (Profiler1.tlb) and marshalling code.
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+	object,
+	uuid(2DC34852-BF94-48E5-BE9E-9960C9C1A304),
+	helpstring("IProfiler Interface"),
+	pointer_default(unique)
+]
+interface IProfiler : IUnknown{
+};
+[
+	uuid(E20506F9-3DFF-4ACE-9056-95F564450042),
+	version(1.0),
+	helpstring("Profiler1 1.0 Type Library")
+]
+library Profiler1Lib
+{
+	importlib("stdole2.tlb");
+	[
+		uuid(DFE1C658-1DB9-49A4-9BE4-D08E9A65653D),
+		helpstring("Profiler Class")
+	]
+	coclass Profiler
+	{
+		[default] interface IUnknown;
+	};
+};
+
+
+
+
+
+

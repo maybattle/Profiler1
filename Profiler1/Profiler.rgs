@@ -1,0 +1,14 @@
+HKCR
+{
+	NoRemove CLSID
+	{
+		ForceRemove {DFE1C658-1DB9-49A4-9BE4-D08E9A65653D} = s 'Profiler Class'
+		{
+			InprocServer32 = s '%MODULE%'
+			{
+			}
+			TypeLib = s '{E20506F9-3DFF-4ACE-9056-95F564450042}'
+			Version = s '1.0'
+		}
+	}
+}
