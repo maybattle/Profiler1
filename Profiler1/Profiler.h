@@ -2,11 +2,9 @@
 
 #pragma once
 #include "resource.h"       // main symbols
-
-
-
 #include "Profiler1_i.h"
 #include "stdafx.h"
+
 
 
 #if defined(_WIN32_WCE) && !defined(_CE_DCOM) && !defined(_CE_ALLOW_SINGLE_THREADED_OBJECTS_IN_MTA)
@@ -63,13 +61,13 @@ private:
 
 	void AddFunctionToMap(FunctionID);
 	STDMETHOD(SetEventMask)();
-	STDMETHOD(GetFullMethodName)(FunctionID functionId, std::wstring* functionName);
+	STDMETHOD(GetFullMethodName)(FunctionID functionId, std::wstring& functionName);
 
 	//Hashmap Speichert alle Functions um sie am Ende mit dem CallCount auszugeben
 	std::map<FunctionID, CFunctionCharacteristics*> _functionCharacteristics;
 
 	int _callStackSize;
-
+	CLogger* _logger; 
 
 };
 

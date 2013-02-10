@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace FirstProfilerNet.Properties {
+namespace Profiler1LauncherNet.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]

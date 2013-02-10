@@ -7,8 +7,8 @@
     <ProjectGuid>{FBA11CEA-5439-405B-AEBF-782B03FB4B53}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>FirstProfilerNet</RootNamespace>
-    <AssemblyName>FirstProfilerNet</AssemblyName>
+    <RootNamespace>Profiler1LauncherNet</RootNamespace>
+    <AssemblyName>Profiler1LauncherNet</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />

@@ -28,11 +28,14 @@
 #include "corprof.h"
 #include "Resource.h"
 #include <string>
+#include <wchar.h>
 #include "winnt.h"
 #include <corhlpr.h>
 #include "CorProfilerCallback.h"
 #include "FunctionCharacteristics.h"
+#include "Logger.h"
 #include <map>
+
 
 using namespace ATL;
 using namespace std;

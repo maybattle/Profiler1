@@ -4,8 +4,8 @@
 class CFunctionCharacteristics
 {
 public:
-	CFunctionCharacteristics(FunctionID functionId, const std::wstring functionName);
-	std::wstring GetFunctionName();
+	CFunctionCharacteristics(FunctionID functionId, const std::wstring& functionName);
+	const std::wstring& GetFunctionName();
 	LONG GetCallCount();
 	void IncCallCount();
 	FunctionID GetFunctionId();

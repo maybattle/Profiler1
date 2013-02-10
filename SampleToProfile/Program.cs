@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+
 using System.Text;
 
 
@@ -10,6 +10,7 @@ namespace SampleToProfile
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("Beam me up scotty!");
             Console.ReadLine();
         }
     }

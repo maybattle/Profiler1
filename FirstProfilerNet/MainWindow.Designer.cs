@@ -1,4 +1,4 @@
-﻿namespace FirstProfilerNet
+﻿namespace Profiler1LauncherNet
 {
     partial class MainWindow
     {

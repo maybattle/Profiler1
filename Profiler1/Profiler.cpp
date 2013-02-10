@@ -121,24 +121,15 @@ CProfiler::~CProfiler(void)
 
 HRESULT CProfiler::FinalConstruct()
 {
-	//// create the log file
-	//CreateLogFile();
-
-	//// log that we have reached FinalConstruct
-	//LogString("Entering FinalConstruct\r\n\r\n");
-	//std::string result = _messener->Connect("192.168.2.101",28015);
-	//LogString("Error: %s",result.c_str());
+	
+	_logger = new CLogger();
+	_logger->WriteStringToLogFormat("FinalConstruct reached\r\n");
 	return S_OK;
 }
 
 void CProfiler::FinalRelease()
 {
-	// log that we have reached FinalRelease
-	//LogString("\r\n\r\nEntering FinalRelease\r\n\r\n");
-
-	//// close the log file
-	//CloseLogFile();
-	//_messener->Disconnect();
+	delete _logger;
 }
 
 
@@ -146,28 +137,32 @@ void CProfiler::FinalRelease()
 //RETURN von E_FAIL teilt der CLR einen Fehler oder kein Interesse am Profilen des Prozesses mit  
 HRESULT CProfiler::Initialize(IUnknown *pICorProfilerInfoUnk)
 {
+	_logger->WriteStringToLogFormat("Initialize reached\r\n");
 	HRESULT hr;
 	//globalen Pointer initialisieren
 	_pICorProfilerCallback = this;
 
 	//ICorProfilerInfo interface holen
     hr = pICorProfilerInfoUnk->QueryInterface(IID_ICorProfilerInfo, (LPVOID*) &_pICorProfilerInfo);
-    if (FAILED(hr))  return E_FAIL;
+    if (FAILED(hr))  {
+		_logger->WriteStringToLogFormat("QueryInterface IID_ICorProfilerInfo failed\r\n");
+		return E_FAIL;
+	}
 
 	//schauen ob auch ICorProfilerInfo2 implementiert wird (bis CLRV4)
 	//wenn nicht, dann haben wir eine .Net-Version aelter als 2 vor uns 
     hr = pICorProfilerInfoUnk->QueryInterface(IID_ICorProfilerInfo2, (LPVOID*) &_pICorProfilerInfo2);
     if (FAILED(hr)){
-		//Man koennte auch eine aeltere .NET Version profilen. In diesem Fall aber nicht. 
-		//return E_FAIL;
+		_logger->WriteStringToLogFormat("QueryInterface IID_ICorProfilerInfo2 failed\r\n");
 		_pICorProfilerInfo2.p = NULL;
 	}
 
-	//hr = _pICorProfilerInfo3->QueryInterface(IID_ICorProfilerCallback3,(LPVOID*) &_pICorProfilerInfo3);
-	//if (FAILED(hr)){
-	//	//CLR Version 2 - 4 liegt vor
-	//	_pICorProfilerInfo3.p = NULL;
-	//}
+	hr = pICorProfilerInfoUnk->QueryInterface(IID_ICorProfilerInfo3,(LPVOID*) &_pICorProfilerInfo3);
+	if (FAILED(hr)){
+		//CLR Version 2 - 4
+		_logger->WriteStringToLogFormat("QueryInterface IID_ICorProfilerInfo3 failed\r\n");
+		_pICorProfilerInfo3.p = NULL;
+	}
 
 		//Events setzen, um der CLR mitzuteilen an welchen Informationen man intessiert ist.
 	hr = SetEventMask();
@@ -175,50 +170,51 @@ HRESULT CProfiler::Initialize(IUnknown *pICorProfilerInfoUnk)
 		_pICorProfilerInfo->SetEventMask(COR_PRF_MONITOR_NONE);
 		return E_FAIL;
 	}
-        
+    
 
 	//Die Enter, Leave und TailCall hooks werden gesetzt
-	if (_pICorProfilerInfo2.p== NULL)
+	if (_pICorProfilerInfo.p!=NULL && _pICorProfilerInfo2.p== NULL)
 	{
 		hr = _pICorProfilerInfo->SetEnterLeaveFunctionHooks((FunctionEnter*)EnterNaked2, (FunctionLeave*)LeaveNaked2, (FunctionTailcall*)TailcallNaked2);
-		
-		if (SUCCEEDED(hr))
+		_logger->WriteStringToLogFormat("set _pICorProfilerInfo->SetEnterLeaveFunctionHooks\r\n");    	
+		if (SUCCEEDED(hr)){
 			hr = _pICorProfilerInfo->SetFunctionIDMapper(FunctionMapper);
+		}
 	}
-	else{
+	else if(_pICorProfilerInfo2.p!=NULL && _pICorProfilerInfo3.p==NULL)
+	{
 		hr = _pICorProfilerInfo2->SetEnterLeaveFunctionHooks2((FunctionEnter2*)&EnterNaked2, (FunctionLeave2*)&LeaveNaked2, (FunctionTailcall2*)&TailcallNaked2);
-		
-		if (SUCCEEDED(hr))
+		_logger->WriteStringToLogFormat("set _pICorProfilerInfo2->SetEnterLeaveFunctionHooks\r\n");    	
+		if (SUCCEEDED(hr)){
 			hr = _pICorProfilerInfo2->SetFunctionIDMapper(FunctionMapper);
+		}
 		
 	}
-	/*if (_pICorProfilerInfo.p!=NULL && _pICorProfilerInfo2.p != NULL && _pICorProfilerInfo3.p!=NULL)
+	else if (_pICorProfilerInfo3.p!=NULL)
 	{
 		hr = _pICorProfilerInfo3->SetEnterLeaveFunctionHooks2((FunctionEnter2*)EnterNaked2, (FunctionLeave2*)LeaveNaked2, (FunctionTailcall2*)TailcallNaked2);
-		
+		_logger->WriteStringToLogFormat("set _pICorProfilerInfo3->SetEnterLeaveFunctionHooks2\r\n");  
 		if (SUCCEEDED(hr))
 			hr = _pICorProfilerInfo3->SetFunctionIDMapper(FunctionMapper);
 	}
-*/
+
     
-	if (FAILED(hr))
-		//log error
-	
+	if (FAILED(hr)){
+		_logger->WriteStringToLogFormat("Unable to initialize profiler.");
+	}
+	_logger->WriteStringToLogFormat("Profiler initialized.");
     return S_OK;
 }
 
 
 void CProfiler::Enter(FunctionID functionID, UINT_PTR clientData, COR_PRF_FRAME_INFO frameInfo, COR_PRF_FUNCTION_ARGUMENT_INFO *argumentInfo)
 {
-	
 	CFunctionCharacteristics* characteristics = NULL;
 	std::map<FunctionID, CFunctionCharacteristics*>::iterator iter = _functionCharacteristics.find(functionID);
 	
 	if (iter != _functionCharacteristics.end())
 	{
-		
 		characteristics = (iter->second);
-		
 		characteristics->IncCallCount();
 		
 		int padCharCount = _callStackSize * 2;
@@ -226,24 +222,16 @@ void CProfiler::Enter(FunctionID functionID, UINT_PTR clientData, COR_PRF_FRAME_
 		{
 			char* padding = new char[(padCharCount) + 1];
 			memset(padding, 0, padCharCount + 1);
-			memset(padding, ' ', padCharCount);
-			// log the function call
-			//LogString("%s%s, id=%d, call count = %d\r\n", padding, functionInfo->GetName(), functionInfo->GetFunctionID(), functionInfo->GetCallCount());
+			memset(padding, '.', padCharCount);
+			_logger-> WriteStringToLogFormat("Enter function name:%s%S, id=%d, call count = %d\r\n", padding, characteristics->GetFunctionName().c_str(), characteristics->GetFunctionId(), characteristics->GetCallCount());
 			delete[] padding;
 		}
 		else
 		{
-			// log the function call
-			//LogString("%s, id=%d, call count = %d\r\n", functionInfo->GetName(), functionInfo->GetFunctionID(), functionInfo->GetCallCount());
+			_logger->WriteStringToLogFormat("Enter function name:%S, id=%d, call count = %d\r\n", characteristics->GetFunctionName().c_str(), characteristics->GetFunctionId(), characteristics->GetCallCount());
 		}
 	}
-	else
-	{
-		// log an error (this shouldn't happen because we're caching the functions
-		// in the function mapping callback
-		//LogString("Error finding function ID %d in the map.\r\n", (int)functionID);
-	}
-	
+	else _logger->WriteStringToLogFormat("Function:%i not found.", functionID);
 	_callStackSize++;
 }
 
@@ -263,37 +251,27 @@ void CProfiler::Tailcall(FunctionID functionID, UINT_PTR clientData, COR_PRF_FRA
 }
 
 
-
-// called when the profiler is being terminated by the CLR
+///Von der CLR aufgerufen, wenn der Profiler beendet wird.
 STDMETHODIMP CProfiler::Shutdown()
 {
-	//// log the we're shutting down
-	//LogString("\r\n\r\nShutdown... writing function list\r\n\r\n" );
-
-	
+	_logger->WriteStringToLogFormat("Write full function list."); 
 	std::map<FunctionID, CFunctionCharacteristics*>::iterator i;
 	for (i = _functionCharacteristics.begin(); i != _functionCharacteristics.end(); i++){
-	//	// log the function's info
 		CFunctionCharacteristics* functionCharacteristics = i->second;
-	//	LogString("%s : call count = %d\r\n", functionInfo->GetName(), functionInfo->GetCallCount());
+		_logger->WriteStringToLogFormat("%S : call count = %d\r\n", functionCharacteristics->GetFunctionName().c_str(),functionCharacteristics->GetCallCount());
 		delete i->second;
 	}
 	_functionCharacteristics.clear();
 	_pICorProfilerCallback = NULL;
-    
+    _logger->WriteStringToLogFormat("Profiler shutdown!\r\n");
 	return S_OK;
 }
 
 
-// this function is called by the CLR when a function has been mapped to an ID
 UINT_PTR CProfiler::FunctionMapper(FunctionID functionID, BOOL *pbHookFunction)
 {
-	// make sure the global reference to our profiler is valid.  Forward this
-	// call to our profiler object
     if (_pICorProfilerCallback != NULL)
         _pICorProfilerCallback->AddFunctionToMap(functionID);
-
-	// we must return the function ID passed as a parameter
 	return (UINT_PTR)functionID;
 }
 
@@ -301,26 +279,25 @@ UINT_PTR CProfiler::FunctionMapper(FunctionID functionID, BOOL *pbHookFunction)
 void CProfiler::AddFunctionToMap(FunctionID functionID)
 {
 	std::map<FunctionID, CFunctionCharacteristics*>::iterator iter = _functionCharacteristics.find(functionID);
-	////Wenn functionID noch nicht vorhanden, dann einfuegen.
+	//Wenn functionID noch nicht vorhanden, dann einfuegen.
 	if (iter == _functionCharacteristics.end())
 	{
-		std::wstring _functionName;
+		std::wstring functionName;
 		
-		HRESULT hr = GetFullMethodName(functionID, &_functionName); 
+		HRESULT hr = GetFullMethodName(functionID, functionName); 
 		if (FAILED(hr))
 		{
-			//LogString("Unable to find the name for %i\r\n", functionID);
+			_logger->WriteStringToLogFormat("Could not find name for functionID:%d\r\n",functionID);
 			return;
-		}
-	//	
+		}	
 		CFunctionCharacteristics* characteristics;
-		characteristics = new CFunctionCharacteristics(functionID, _functionName);
+		characteristics = new CFunctionCharacteristics(functionID, functionName);
 		_functionCharacteristics.insert(std::pair<FunctionID, CFunctionCharacteristics*>(functionID, characteristics));
 	}
 }
 
 //Methodname aus functionId ermitteln
-HRESULT CProfiler::GetFullMethodName(FunctionID functionId, std::wstring* functionName)
+HRESULT CProfiler::GetFullMethodName(FunctionID functionId, std::wstring &functionName)
 {
 	IMetaDataImport* pIMetaDataImport = 0;
 	HRESULT hr = S_OK;
@@ -349,17 +326,16 @@ HRESULT CProfiler::GetFullMethodName(FunctionID functionId, std::wstring* functi
 			hr = pIMetaDataImport->GetTypeDefProps(classTypeDef, szClass, MAX_CLASSNAME_LENGTH, &cchClass, 0, 0);
 			if (SUCCEEDED(hr))
 			{
-				//Name aus ClassName und FunctionName erstellen
-				size_t length = 0;
+				//Kompletten Name aus ClassName und FunctionName erstellen
+				size_t length = MAX_CLASSNAME_LENGTH;
 				WCHAR fullFunctionName[MAX_CLASSNAME_LENGTH];
 				_snwprintf_s(fullFunctionName,length,L"%s.%s",szClass,szFunction);
-				*functionName = fullFunctionName;
+				functionName = fullFunctionName;
 			}
 		}
 		//WICHTIG: Die Metadaten Referenz muss immer freigegeben werden.
 		pIMetaDataImport->Release();
 	}
-
 	return hr;
 }
 
@@ -409,6 +385,7 @@ HRESULT CProfiler::SetEventMask()
 
 	// set the event mask 
 	DWORD eventMask = (DWORD) (COR_PRF_MONITOR_ENTERLEAVE);
+	_logger->WriteStringToLogFormat("Set EventMask to COR_PRF_MONITOR_ENTERLEAVE\r\n");
 
 	return _pICorProfilerInfo->SetEventMask(eventMask);
 }

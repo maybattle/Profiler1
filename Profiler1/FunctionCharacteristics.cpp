@@ -3,13 +3,14 @@
 #include "FunctionCharacteristics.h"
 
 
-CFunctionCharacteristics::CFunctionCharacteristics(FunctionID functionId, const std::wstring functionName)
+CFunctionCharacteristics::CFunctionCharacteristics(FunctionID functionId, const std::wstring& functionName)
 {
 	_functionId= functionId;
-	_functionName = functionName;
+	_functionName = std::wstring(functionName);
+	_callCount = 0;
 }
 
-std::wstring CFunctionCharacteristics::GetFunctionName(){
+const std::wstring& CFunctionCharacteristics::GetFunctionName(){
 	return _functionName;
 }
 
