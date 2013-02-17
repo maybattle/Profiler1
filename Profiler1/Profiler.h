@@ -48,11 +48,12 @@ public:
 	static UINT_PTR _stdcall FunctionMapper(FunctionID functionId, BOOL *pbHookFunction);
 
 	//Callback Funktionen
-	void Enter(FunctionID functionID, UINT_PTR clientData, COR_PRF_FRAME_INFO frameInfo, COR_PRF_FUNCTION_ARGUMENT_INFO *argumentInfo);
-	void Leave(FunctionID functionID, UINT_PTR clientData, COR_PRF_FRAME_INFO frameInfo, COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange);
-	void Tailcall(FunctionID functionID, UINT_PTR clientData, COR_PRF_FRAME_INFO frameInfo);
+	void Enter(FunctionIDOrClientID functionIDOrClientID);
+	void Leave(FunctionIDOrClientID functionIDOrClientID);
+	void Tailcall(FunctionIDOrClientID functionIDOrClientID);
 
 	~CProfiler(void);
+
 
 private:
 	CComQIPtr<ICorProfilerInfo> _pICorProfilerInfo;
@@ -62,9 +63,9 @@ private:
 	void AddFunctionToMap(FunctionID);
 	STDMETHOD(SetEventMask)();
 	STDMETHOD(GetFullMethodName)(FunctionID functionId, std::wstring& functionName);
-
+	
 	//Hashmap Speichert alle Functions um sie am Ende mit dem CallCount auszugeben
-	std::map<FunctionID, CFunctionCharacteristics*> _functionCharacteristics;
+	std::unordered_map<FunctionID, CFunctionInformation*> _functionCharacteristics;
 
 	int _callStackSize;
 	CLogger* _logger; 

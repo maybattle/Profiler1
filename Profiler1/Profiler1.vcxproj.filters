@@ -40,10 +40,10 @@
     <ClCompile Include="CorProfilerCallback.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FunctionCharacteristics.cpp">
+    <ClCompile Include="Logger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Logger.cpp">
+    <ClCompile Include="FunctionInformation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -72,10 +72,10 @@
     <ClInclude Include="CorProfilerCallback.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FunctionCharacteristics.h">
+    <ClInclude Include="Logger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Logger.h">
+    <ClInclude Include="FunctionInformation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

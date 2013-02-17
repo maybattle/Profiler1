@@ -32,9 +32,9 @@
 #include "winnt.h"
 #include <corhlpr.h>
 #include "CorProfilerCallback.h"
-#include "FunctionCharacteristics.h"
+#include "FunctionInformation.h"
 #include "Logger.h"
-#include <map>
+#include <unordered_map>
 
 
 using namespace ATL;

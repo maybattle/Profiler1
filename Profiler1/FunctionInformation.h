@@ -1,10 +1,10 @@
 #pragma once
 #include "stdafx.h"
 
-class CFunctionCharacteristics
+class CFunctionInformation
 {
 public:
-	CFunctionCharacteristics(FunctionID functionId, const std::wstring& functionName);
+	CFunctionInformation(FunctionID functionId, const std::wstring& functionName);
 	const std::wstring& GetFunctionName();
 	LONG GetCallCount();
 	void IncCallCount();
