@@ -49,9 +49,12 @@ public:
 
 	//Callback Funktionen
 	void Enter(FunctionIDOrClientID functionIDOrClientID);
+	void EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo);
 	void Leave(FunctionIDOrClientID functionIDOrClientID);
+	void LeaveWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo);
 	void Tailcall(FunctionIDOrClientID functionIDOrClientID);
-
+	void TailcallWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo);
+	
 	~CProfiler(void);
 
 

@@ -11,6 +11,12 @@ void __stdcall EnterGlobal(FunctionIDOrClientID functionIDOrClientID)
         _pICorProfilerCallback->Enter(functionIDOrClientID);
 }
 
+void __stdcall EnterGlobalWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
+{
+    if (_pICorProfilerCallback != NULL)
+        _pICorProfilerCallback->EnterWithInfo(functionIDOrClientID, eltInfo);
+}
+
 
 //Wird von der CLR aufgerufen
 //Manuelles sichern und Wiederherstellen der Register
@@ -30,12 +36,44 @@ void __declspec(naked) EnterNaked3(FunctionIDOrClientID functionIDOrClientID)
     }
 }
 
+//Wird von der CLR aufgerufen
+//Manuelles sichern und Wiederherstellen der Register
+void __declspec(naked) EnterNaked3WithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
+{
+    __asm
+    {
+        push ebp
+		mov ebp, esp 
+        pushad
+
+		mov edx, [ebp+0x0C]
+		push edx
+
+		mov eax, [ebp+0x08]
+		push eax
+
+		call EnterGlobalWithInfo;	
+    
+	
+        popad
+        pop ebp
+        ret SIZE functionIDOrClientID + SIZE eltInfo
+    }
+}
+
 
 void __stdcall LeaveGlobal(FunctionIDOrClientID functionIDOrClientID)
 {
     if (_pICorProfilerCallback != NULL)
         _pICorProfilerCallback->Leave(functionIDOrClientID);
 }
+
+void __stdcall LeaveGlobalWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
+{
+    if (_pICorProfilerCallback != NULL)
+        _pICorProfilerCallback->LeaveWithInfo(functionIDOrClientID, eltInfo);
+}
+
 
 //Wird von der CLR aufgerufen
 //Manuelles sichern und Wiederherstellen der Register
@@ -55,7 +93,37 @@ void __declspec( naked ) LeaveNaked3(FunctionIDOrClientID functionIDOrClientID)
     }
 }
 
+//Wird von der CLR aufgerufen
+//Manuelles sichern und Wiederherstellen der Register
+void __declspec( naked ) LeaveNaked3WithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
+{
+    __asm
+    {
+        push ebp
+		mov ebp, esp 
+        pushad
+
+		mov edx, [ebp+0x0C]
+		push edx
+
+		mov eax, [ebp+0x08]
+		push eax
+
+		call LeaveGlobalWithInfo;	
+	
+        popad
+        pop ebp
+        ret SIZE functionIDOrClientID + SIZE eltInfo
+    }
+}
+
 void __stdcall TailcallGlobal(FunctionIDOrClientID functionIDOrClientID)
+{
+    if (_pICorProfilerCallback != NULL)
+        _pICorProfilerCallback->Tailcall(functionIDOrClientID);
+}
+
+void __stdcall TailcallGlobalWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
 {
     if (_pICorProfilerCallback != NULL)
         _pICorProfilerCallback->Tailcall(functionIDOrClientID);
@@ -77,6 +145,32 @@ void __declspec( naked ) TailcallNaked3(FunctionIDOrClientID functionIDOrClientI
         pop ecx
         pop eax
         ret 4
+    }
+}
+
+//Wird von der CLR aufgerufen
+//Manuelles sichern und Wiederherstellen der Register
+void __declspec( naked ) TailcallNaked3WithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
+{
+    __asm
+    {
+            
+ push ebp
+		mov ebp, esp 
+        pushad
+
+		mov edx, [ebp+0x0C]
+		push edx
+
+		mov eax, [ebp+0x08]
+		push eax
+
+		call TailcallGlobalWithInfo;	
+    
+	
+        popad
+        pop ebp
+        ret SIZE functionIDOrClientID + SIZE eltInfo
     }
 }
 
@@ -149,18 +243,24 @@ HRESULT CProfiler::Initialize(IUnknown *pICorProfilerInfoUnk)
     //FunctionIDs und FunctionInformations werden in einer Map gespeichert.
     hr = _pICorProfilerInfo3->SetFunctionIDMapper(FunctionMapper);
     if (FAILED(hr)){
-        _logger->WriteStringToLogFormat("SetEnterLeaveFunctionHooks3 failed\r\n");
+        _logger->WriteStringToLogFormat("SetFunctionIDMapper failed\r\n");
         return E_FAIL;
     }
 
     //Setzen der Enter, Leave, Tailcall Hooks
-    hr = _pICorProfilerInfo3->SetEnterLeaveFunctionHooks3(
+    /*hr = _pICorProfilerInfo3->SetEnterLeaveFunctionHooks3(
             (FunctionEnter3*)EnterNaked3, 
             (FunctionLeave3*)LeaveNaked3, 
             (FunctionTailcall3*)TailcallNaked3);
+*/
+	hr = _pICorProfilerInfo3->SetEnterLeaveFunctionHooks3WithInfo(
+		(FunctionEnter3WithInfo*)EnterNaked3WithInfo,
+		(FunctionLeave3WithInfo*)LeaveNaked3WithInfo,
+		(FunctionTailcall3WithInfo*)TailcallNaked3WithInfo);
 
     if (FAILED(hr)){
         _logger->WriteStringToLogFormat("SetEnterLeaveFunctionHooks3 failed\r\n");
+		return E_FAIL;
     }
 
     _logger->WriteStringToLogFormat("Profiler initialized\r\n");
@@ -170,13 +270,13 @@ HRESULT CProfiler::Initialize(IUnknown *pICorProfilerInfoUnk)
     return S_OK;
 }
 
-
-void CProfiler::Enter(FunctionIDOrClientID functionIDOrClientID)
+void CProfiler::EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
 {
-    CFunctionInformation* functionInformation = NULL;
+	 CFunctionInformation* functionInformation = NULL;
     std::unordered_map<FunctionID, CFunctionInformation*>::iterator 
         iter = _functionInformations.find(functionIDOrClientID.functionID);
     
+	
     if (iter != _functionInformations.end())
     {
         functionInformation = (iter->second);
@@ -204,6 +304,40 @@ void CProfiler::Enter(FunctionIDOrClientID functionIDOrClientID)
     _callStackSize++;
 }
 
+void CProfiler::Enter(FunctionIDOrClientID functionIDOrClientID)
+{
+    /*CFunctionInformation* functionInformation = NULL;
+    std::unordered_map<FunctionID, CFunctionInformation*>::iterator 
+        iter = _functionInformations.find(functionIDOrClientID.functionID);
+    
+	
+    if (iter != _functionInformations.end())
+    {
+        functionInformation = (iter->second);
+        functionInformation->IncCallCount();
+        
+        int padCharCount = _callStackSize * 2;
+        if (padCharCount > 0)
+        {
+            char* padding = new char[(padCharCount) + 1];
+            memset(padding, 0, padCharCount + 1);
+            memset(padding, '.', padCharCount);
+            _logger-> WriteStringToLogFormat("Enter function name:%s%S, id=%d\r\n", 
+                padding, functionInformation->GetFunctionName().c_str(), 
+                functionInformation->GetFunctionId());
+            delete[] padding;
+        }
+        else
+        {
+            _logger->WriteStringToLogFormat("Enter function name:%S, id=%d\r\n", 
+                functionInformation->GetFunctionName().c_str(), 
+                functionInformation->GetFunctionId());
+        }
+    }
+    else _logger->WriteStringToLogFormat("Function:%i not found.", functionIDOrClientID);*/
+    _callStackSize++;
+}
+
 
 void CProfiler::Leave(FunctionIDOrClientID functionIDOrClientID)
 {
@@ -213,7 +347,23 @@ void CProfiler::Leave(FunctionIDOrClientID functionIDOrClientID)
     }
 }
 
+void CProfiler::LeaveWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
+{
+    if (_callStackSize > 0)
+    {
+        _callStackSize--;
+    }
+}
+
 void CProfiler::Tailcall(FunctionIDOrClientID functionIDOrClientID)
+{
+    if (_callStackSize > 0)
+    {
+        _callStackSize--;
+    }
+}
+
+void CProfiler::TailcallWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
 {
     if (_callStackSize > 0)
     {
@@ -353,8 +503,8 @@ HRESULT CProfiler::SetEventMask()
     //COR_PRF_ALL	= 0x3fffffff,
     //COR_PRF_MONITOR_IMMUTABLE	= COR_PRF_MONITOR_CODE_TRANSITIONS | COR_PRF_MONITOR_REMOTING | COR_PRF_MONITOR_REMOTING_COOKIE | COR_PRF_MONITOR_REMOTING_ASYNC | COR_PRF_MONITOR_GC | COR_PRF_ENABLE_REJIT | COR_PRF_ENABLE_INPROC_DEBUGGING | COR_PRF_ENABLE_JIT_MAPS | COR_PRF_DISABLE_OPTIMIZATIONS | COR_PRF_DISABLE_INLINING | COR_PRF_ENABLE_OBJECT_ALLOCATED | COR_PRF_ENABLE_FUNCTION_ARGS | COR_PRF_ENABLE_FUNCTION_RETVAL | COR_PRF_ENABLE_FRAME_INFO | COR_PRF_ENABLE_STACK_SNAPSHOT | COR_PRF_USE_PROFILE_IMAGES
     
-    DWORD eventMask = (DWORD) (COR_PRF_MONITOR_ENTERLEAVE);
-    _logger->WriteStringToLogFormat("Set EventMask to COR_PRF_MONITOR_ENTERLEAVE\r\n");
+    DWORD eventMask = (DWORD) (COR_PRF_MONITOR_ENTERLEAVE | COR_PRF_ENABLE_FUNCTION_ARGS | COR_PRF_ENABLE_FUNCTION_RETVAL);
+    _logger->WriteStringToLogFormat("Set EventMask to COR_PRF_MONITOR_ENTERLEAVE | COR_PRF_ENABLE_FUNCTION_ARGS | COR_PRF_ENABLE_FUNCTION_RETVAL\r\n");
 
     return _pICorProfilerInfo->SetEventMask(eventMask);
 }
