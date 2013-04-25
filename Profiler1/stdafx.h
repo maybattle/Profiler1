@@ -23,7 +23,6 @@
 #include <atlbase.h>
 #include <atlcom.h>
 #include <atlctl.h>
-
 #include "cor.h"
 #include "corprof.h"
 #include "Resource.h"

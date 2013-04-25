@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Profiler1", "Profiler1\Profiler1.vcxproj", "{3BF9F3B4-E3DB-4678-94B3-721DF554961B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Profiler1LauncherNet", "FirstProfilerNet\Profiler1LauncherNet.csproj", "{FBA11CEA-5439-405B-AEBF-782B03FB4B53}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Profiler1LauncherNet", "Profiler1LauncherNet\Profiler1LauncherNet.csproj", "{FBA11CEA-5439-405B-AEBF-782B03FB4B53}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleToProfile_CLR4_x86", "SampleToProfile\SampleToProfile_CLR4_x86.csproj", "{4FF99F85-551C-4309-AD3E-48D45BA25AC4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleToProfile_CLR4_x86", "SampleToProfile_CLR4_x86\SampleToProfile_CLR4_x86.csproj", "{4FF99F85-551C-4309-AD3E-48D45BA25AC4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleToAnalyzeEF_Linq2Sql_AdoNetCalls", "SampleToAnalyzeEF_Linq2Sql_AdoNetCalls\SampleToAnalyzeEF_Linq2Sql_AdoNetCalls.csproj", "{31939535-ECB9-405A-9198-BCCD0DE90B90}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -47,6 +49,16 @@ Global
 		{4FF99F85-551C-4309-AD3E-48D45BA25AC4}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{4FF99F85-551C-4309-AD3E-48D45BA25AC4}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{4FF99F85-551C-4309-AD3E-48D45BA25AC4}.Release|Win32.ActiveCfg = Release|Any CPU
+		{31939535-ECB9-405A-9198-BCCD0DE90B90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31939535-ECB9-405A-9198-BCCD0DE90B90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31939535-ECB9-405A-9198-BCCD0DE90B90}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{31939535-ECB9-405A-9198-BCCD0DE90B90}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{31939535-ECB9-405A-9198-BCCD0DE90B90}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{31939535-ECB9-405A-9198-BCCD0DE90B90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31939535-ECB9-405A-9198-BCCD0DE90B90}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31939535-ECB9-405A-9198-BCCD0DE90B90}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{31939535-ECB9-405A-9198-BCCD0DE90B90}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{31939535-ECB9-405A-9198-BCCD0DE90B90}.Release|Win32.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

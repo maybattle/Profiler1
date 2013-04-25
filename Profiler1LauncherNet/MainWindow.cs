@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,7 +18,7 @@ namespace Profiler1LauncherNet
         public MainWindow()
         {
             InitializeComponent();
-            SelectedProcessToProfileTextbox.Text = @"C:\TestProjects\Profiler1\bin\Debug\SampleToProfile.exe";
+            SelectedProcessToProfileTextbox.Text = Path.Combine(Directory.GetCurrentDirectory(),@"SampleToProfile_CLR4_x86.exe");
         }
 
         private void SelectApplicationButton_Click(object sender, EventArgs e)
@@ -43,6 +44,9 @@ namespace Profiler1LauncherNet
             //Neue Funktionen werden nicht verwendet.
             startInfo.EnvironmentVariables.Add("COMPLUS_ProfAPI_ProfilerCompatibilitySetting", "EnableV2Profiler");
 
+            //http://msdn.microsoft.com/en-us/library/ee461607.aspx
+            //Die zu profilende CLR Version wird vorgegeben
+            startInfo.EnvironmentVariables.Add("CLR_VERSION","4");
             startInfo.UseShellExecute = false;
             var process = Process.Start(startInfo);
         }

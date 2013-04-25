@@ -64,15 +64,15 @@ private:
 	STDMETHOD(SetEventMask)();
 	STDMETHOD(GetFullMethodName)(FunctionID functionId, std::wstring& functionName);
 	
-	//Hashmap Speichert alle Functions um sie am Ende mit dem CallCount auszugeben
-	std::unordered_map<FunctionID, CFunctionInformation*> _functionCharacteristics;
+	//Map Speichert alle Funktionen, um sie am Ende mit dem CallCount auszugeben
+	std::unordered_map<FunctionID, CFunctionInformation*> _functionInformations;
 
 	int _callStackSize;
 	CLogger* _logger; 
 
 };
 
-// Referenz auf Callbackobjekt
+//globale Referenz auf den Profiler
 extern CProfiler *_pICorProfilerCallback;    
 
 OBJECT_ENTRY_AUTO(__uuidof(Profiler), CProfiler)
