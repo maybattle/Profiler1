@@ -272,7 +272,8 @@ HRESULT CProfiler::Initialize(IUnknown *pICorProfilerInfoUnk)
 
 void CProfiler::EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
 {
-	 CFunctionInformation* functionInformation = NULL;
+	
+	CFunctionInformation* functionInformation = NULL;
     std::unordered_map<FunctionID, CFunctionInformation*>::iterator 
         iter = _functionInformations.find(functionIDOrClientID.functionID);
     
@@ -281,8 +282,32 @@ void CProfiler::EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF
     {
         functionInformation = (iter->second);
         functionInformation->IncCallCount();
-        
-        int padCharCount = _callStackSize * 2;
+        if(functionInformation->GetFunctionName().find(L"SampleToProfile.Beamer.Start")!=std::wstring::npos){
+			COR_PRF_FRAME_INFO frameInfo;
+			ULONG cbArgumentInfo=0;
+			COR_PRF_FUNCTION_ARGUMENT_INFO *pArgumentInfo;
+			//Function muss 2mal aufgerufen werden. 
+			//Das erste Mal mit cbArgumentInfo=0, pArgumentInfo=NULL
+			//als Ergebnis steht in cbArgumentInfo die Groeße des Speicherbereiches der Funktionsargumente und die Funktion liefert FAILED(hr)
+			//Das zweite Mal mit dem Ergebnis von cbArgumentInfo des ersten Aufrufs und dem entsprechend grossen Speicherbereich von pArgumentInfo
+			HRESULT hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID,eltInfo,	&frameInfo, &cbArgumentInfo,NULL);
+			if(FAILED(hr) && cbArgumentInfo>0){
+				pArgumentInfo = new COR_PRF_FUNCTION_ARGUMENT_INFO[cbArgumentInfo];
+				hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID,eltInfo,	&frameInfo, &cbArgumentInfo,pArgumentInfo);
+				if(SUCCEEDED(hr)) {
+					_logger->WriteStringToLogFormat("Number of arguments is:%lu",pArgumentInfo->numRanges);
+
+				}
+				else{
+					_logger->WriteStringToLogFormat("Error get parameter info for function:%S",functionInformation->GetFunctionName().c_str());		
+				}
+			}
+			
+			_logger->WriteStringToLogFormat("cbArgumentInfo:%d",cbArgumentInfo);		
+
+		}
+
+    /*    int padCharCount = _callStackSize * 2;
         if (padCharCount > 0)
         {
             char* padding = new char[(padCharCount) + 1];
@@ -298,7 +323,7 @@ void CProfiler::EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF
             _logger->WriteStringToLogFormat("Enter function name:%S, id=%d\r\n", 
                 functionInformation->GetFunctionName().c_str(), 
                 functionInformation->GetFunctionId());
-        }
+        }*/
     }
     else _logger->WriteStringToLogFormat("Function:%i not found.", functionIDOrClientID);
     _callStackSize++;
@@ -415,11 +440,18 @@ void CProfiler::AddFunctionToMap(FunctionID functionID)
 		}	
 		CFunctionInformation* characteristics;
 		characteristics = new CFunctionInformation(functionID, functionName);
+		FillParameterInformations(functionID,characteristics->ParameterInformations);
 		_functionInformations.insert(std::pair<FunctionID, CFunctionInformation*>(functionID, characteristics));
 	}
 }
 
-//Methodname aus functionId ermitteln
+
+HRESULT CProfiler::FillParameterInformations(FunctionID functionId, std::unordered_map<std::wstring,CParameterInformation*> parameterInformations){
+
+	return S_OK;
+}
+
+//Methodenname aus functionId ermitteln
 HRESULT CProfiler::GetFullMethodName(FunctionID functionId, std::wstring &functionName)
 {
     IMetaDataImport* pIMetaDataImport = 0;
@@ -437,11 +469,27 @@ HRESULT CProfiler::GetFullMethodName(FunctionID functionId, std::wstring &functi
         mdTypeDef classTypeDef;
         ULONG cchFunction;
         ULONG cchClass;
-        
+        DWORD dwAttr;
+		PCCOR_SIGNATURE pMethodSigBlob;
+		ULONG cbMethodSigBlob;
+		ULONG ulCodeRVA = 0;
+		DWORD dwImplFlags = 0;
+
         //Metadaten der Methode ermitteln
         //http://msdn.microsoft.com/en-us/library/ms233163.aspx
-        hr = pIMetaDataImport->GetMethodProps(funcToken, &classTypeDef, szFunction, MAX_CLASSNAME_LENGTH, &cchFunction, 0, 0, 0, 0, 0);
-        if (SUCCEEDED(hr))
+        hr = pIMetaDataImport->GetMethodProps(
+				funcToken, 
+				&classTypeDef, 
+				szFunction, 
+				MAX_CLASSNAME_LENGTH, 
+				&cchFunction, 
+				&dwAttr, 
+				&pMethodSigBlob, 
+				&cbMethodSigBlob, 
+				&ulCodeRVA,
+				&dwImplFlags);
+
+		if (SUCCEEDED(hr))
         {
             //Den eigentlichen Namen der Funtion ermitteln.
             //http://msdn.microsoft.com/en-us/library/ms230143.aspx
@@ -453,6 +501,22 @@ HRESULT CProfiler::GetFullMethodName(FunctionID functionId, std::wstring &functi
                 WCHAR fullFunctionName[MAX_CLASSNAME_LENGTH];
                 _snwprintf_s(fullFunctionName,length,L"%s.%s",szClass,szFunction);
                 functionName = fullFunctionName;
+				//PBYTE pParamStart = (PBYTE)pMethodSigBlob + 2;
+				//PBYTE pCurrent = pParamStart;
+				ULONG callConvention;
+				ULONG argumentCount = 0;
+				std::wstring parameterName;
+				INT32 typeAsEnum;
+				pMethodSigBlob += CorSigUncompressData( pMethodSigBlob, &callConvention);
+				if ( callConvention != IMAGE_CEE_CS_CALLCONV_FIELD) {
+					pMethodSigBlob += CorSigUncompressData(pMethodSigBlob,&argumentCount);
+					pMethodSigBlob = ParseElementType( pIMetaDataImport, pMethodSigBlob, parameterName, &typeAsEnum);	
+					_logger->WriteStringToLogFormat("FunctionName:%S\tReturnType:%S\r\n",functionName.c_str(),parameterName.c_str());
+					for (ULONG i=0; i<argumentCount; i++){
+						pMethodSigBlob = ParseElementType( pIMetaDataImport, pMethodSigBlob, parameterName, &typeAsEnum);	
+						_logger->WriteStringToLogFormat("FunctionName:%S\tParameter:%S\r\n",functionName.c_str(),parameterName.c_str());
+					}
+				}
             }
         }
         //WICHTIG: abschliessend immer Release aufrufen.
@@ -460,6 +524,285 @@ HRESULT CProfiler::GetFullMethodName(FunctionID functionId, std::wstring &functi
     }
     return hr;
 }
+
+
+
+
+
+
+
+PCCOR_SIGNATURE CProfiler::ParseElementType(IMetaDataImport *metaDataImport, PCCOR_SIGNATURE signature, wstring &signatureText, INT32 *pElementType)
+{	
+	COR_SIGNATURE corSignature = *signature++;
+	
+	*pElementType = corSignature;
+	switch (corSignature) 
+	{	
+	case ELEMENT_TYPE_VOID:
+		signatureText.append(L"void");
+		break;							
+	case ELEMENT_TYPE_BOOLEAN:	
+		signatureText.append(L"bool");	
+		break;			
+	case ELEMENT_TYPE_CHAR:
+		signatureText.append(L"wchar");	
+		break;							
+	case ELEMENT_TYPE_I1:
+		signatureText.append(L"int8");	
+		break;		 		
+	case ELEMENT_TYPE_U1:
+		signatureText.append(L"unsigned int8");	
+		break;	 		
+	case ELEMENT_TYPE_I2:
+		signatureText.append(L"int16");	
+		break;		
+	case ELEMENT_TYPE_U2:
+		signatureText.append(L"unsigned int16");	
+		break;					
+	case ELEMENT_TYPE_I4:
+		signatureText.append(L"int32");	
+		break;        
+	case ELEMENT_TYPE_U4:
+		signatureText.append(L"unsigned int32");	
+		break;				
+	case ELEMENT_TYPE_I8:
+		signatureText.append(L"int64");	
+		break;				
+	case ELEMENT_TYPE_U8:
+		signatureText.append(L"unsigned int64");	
+		break;		
+	case ELEMENT_TYPE_R4:
+		signatureText.append(L"float32");	
+		break;					
+	case ELEMENT_TYPE_R8:
+		signatureText.append(L"float64");	
+		break;			 		
+	case ELEMENT_TYPE_STRING:
+		signatureText.append(L"String");	
+		break;	
+	case ELEMENT_TYPE_VAR:
+		signatureText.append(L"class variable(unsigned int8)");	
+		break;		
+	case ELEMENT_TYPE_MVAR:
+		signatureText.append(L"method variable(unsigned int8)");	
+		break;					         
+	case ELEMENT_TYPE_TYPEDBYREF:
+		signatureText.append(L"refany");	
+		break;		 		
+	case ELEMENT_TYPE_I:
+		signatureText.append(L"int");	
+		break;			
+	case ELEMENT_TYPE_U:
+		signatureText.append(L"unsigned int");	
+		break;			  		
+	case ELEMENT_TYPE_OBJECT:
+		signatureText.append(L"Object");	
+		break;		       
+	case ELEMENT_TYPE_SZARRAY:	 
+		signature = ParseElementType(metaDataImport, signature, signatureText, pElementType); 
+		signatureText.append(L"[]");
+		break;				
+	case ELEMENT_TYPE_PINNED:
+		signature = ParseElementType(metaDataImport, signature, signatureText, pElementType); 
+		signatureText.append(L"pinned");	
+		break;	        
+	case ELEMENT_TYPE_PTR:   
+		signature = ParseElementType(metaDataImport, signature, signatureText, pElementType); 
+		signatureText.append(L"*");	
+		break;           
+	case ELEMENT_TYPE_BYREF:   
+		signature = ParseElementType(metaDataImport, signature, signatureText, pElementType); 
+		signatureText.append(L"&");	
+		break;
+	case ELEMENT_TYPE_VALUETYPE:   
+	case ELEMENT_TYPE_CLASS:	
+	case ELEMENT_TYPE_CMOD_REQD:
+	case ELEMENT_TYPE_CMOD_OPT:
+		{
+			mdToken	token;	
+			signature += CorSigUncompressToken( signature, &token ); 
+
+			WCHAR className[ MAX_CLASSNAME_LENGTH ];
+			if ( TypeFromToken( token ) == mdtTypeRef )
+			{
+				metaDataImport->GetTypeRefProps(token, NULL, className, MAX_CLASSNAME_LENGTH, NULL);
+			}
+			else
+			{
+				metaDataImport->GetTypeDefProps(token, className, MAX_CLASSNAME_LENGTH, NULL, NULL, NULL );
+			}
+
+			signatureText.append(className );
+		}
+		break;		
+	case ELEMENT_TYPE_GENERICINST:
+		{
+			signature = ParseElementType(metaDataImport, signature, signatureText, pElementType); 
+
+			signatureText.append(L"<");	
+			ULONG arguments = CorSigUncompressData(signature);
+			for (ULONG i = 0; i < arguments; ++i)
+			{
+				if(i != 0)
+				{
+					signatureText.append(L", ");	
+				}
+
+				signature = ParseElementType(metaDataImport, signature, signatureText, pElementType);
+			}
+			signatureText.append(L">");	
+		}
+		break;		        
+	case ELEMENT_TYPE_ARRAY:	
+		{
+			signature = ParseElementType(metaDataImport, signature, signatureText, pElementType);              
+			ULONG rank = CorSigUncompressData(signature);													
+			if ( rank == 0 ) 
+			{
+				signatureText.append(L"[?]");
+			}
+			else 
+			{		
+				ULONG arraysize = (sizeof(ULONG) * 2 * rank);
+				ULONG *lower = (ULONG *)_alloca(arraysize);
+				memset(lower, 0, arraysize); 
+				ULONG *sizes = &lower[rank];
+
+				ULONG numsizes = CorSigUncompressData(signature);	
+				for (ULONG i = 0; i < numsizes && i < rank; i++)
+				{
+					sizes[i] = CorSigUncompressData(signature);	
+				}
+
+				ULONG numlower = CorSigUncompressData(signature);	
+				for (ULONG i = 0; i < numlower && i < rank; i++)	
+				{
+					lower[i] = CorSigUncompressData( signature ); 
+				}
+
+				signatureText.append(L"[");	
+				for (ULONG i = 0; i < rank; ++i)	
+				{					
+					if (i > 0) 
+					{
+						signatureText.append(L",");
+					}
+
+					if (lower[i] == 0)
+					{
+						if(sizes[i] != 0)
+						{
+							WCHAR *size = new WCHAR[MAX_BUFFER_SIZE];
+							size[0] = '\0';
+							wsprintf(size, L"%d", sizes[i]);											
+							signatureText.append(size);
+						}
+					}	
+					else	
+					{
+						WCHAR *low = new WCHAR[MAX_BUFFER_SIZE];
+						low[0] = '\0';
+						wsprintf(low, L"%d", lower[i]);
+						signatureText.append(low);
+						signatureText.append(L"...");	
+
+						if (sizes[i] != 0)	
+						{
+							WCHAR *size = new WCHAR[MAX_BUFFER_SIZE];
+							size[0] = '\0';
+							wsprintf(size, L"%d", (lower[i] + sizes[i] + 1));
+							signatureText.append(size);
+						}
+					}
+				}
+				signatureText.append(L"]");
+			}
+		} 
+		break;   		    
+	default:	
+	case ELEMENT_TYPE_END:	
+	case ELEMENT_TYPE_SENTINEL:	
+		WCHAR *elementType = new WCHAR[MAX_BUFFER_SIZE];
+		elementType[0] = '\0';
+		wsprintf(elementType, L"<UNKNOWN:0x%X>", corSignature);
+		signatureText.append(elementType);
+		break;				                      				            
+	}
+
+	return signature;
+}
+
+//void CProfiler::PrintFunctionArguments (FunctionID functionId, COR_PRF_FRAME_INFO func, COR_PRF_FUNCTION_ARGUMENT_RANGE* range)
+//{
+//	
+//	IMetaDataImport * pIMetaDataImport = 0;
+//	HRESULT hr = S_OK;
+//	mdToken funcToken = 0;
+//
+//	hr = m_pICorProfilerInfo->GetTokenAndMetaDataFromFunction (functionId,
+//    															IID_IMetaDataImport,
+//																(LPUNKNOWN *) &pIMetaDataImport,
+//																&funcToken);
+//
+//	if(SUCCEEDED(hr))
+//	{
+//		mdTypeDef memberClass;
+//		DWORD dwAttr;
+//		PCCOR_SIGNATURE pMethodSigBlob;
+//		ULONG cbMethodSigBlob;
+//		ULONG ulCodeRVA = 0;
+//		DWORD dwImplFlags = 0;
+//	    
+//		hr = pIMetaDataImport->GetMethodProps (funcToken,
+//												&memberClass,
+//												g_szMethodName,
+//												NAME_BUFFER_SIZE,
+//												NULL,
+//												&dwAttr,
+//												&pMethodSigBlob, 
+//												&cbMethodSigBlob,
+//												&ulCodeRVA, 
+//												&dwImplFlags);
+//
+//		// Now crack open the sig
+//
+//        // Get the number of parameters,skip past callconv
+//        ULONG numberParams = ( *((PBYTE)pMethodSigBlob + 1) );
+//		PBYTE pParamStart = (PBYTE)pMethodSigBlob + 2;
+//		PBYTE pCurrent = pParamStart;
+//
+//		// NOTE: THIS ASSUMES ONE RANGE FOR SIMPLICITY
+//		PBYTE pValues = (PBYTE)range->startAddress;
+//
+//        // Now loop through all of the params
+//        for (ULONG i=0; i<numberParams; i++)
+//        {
+//			// skip over custommod
+//			pCurrent++;
+//
+//			PCCOR_SIGNATURE pWorkingSig = (PCCOR_SIGNATURE)pCurrent;
+//			// get the token type of this signature
+//			CorElementType type = (CorElementType)CorSigUncompressData( pWorkingSig );
+//
+//			// hack for signature cracking arrays
+//			if((*pWorkingSig) == 0x1d) //ELEMENT_TYPE_SZARRAY
+//				type = ELEMENT_TYPE_SZARRAY;
+//
+//			char typeString[128];
+//			typeString[0]=0x00;
+//			GetElementTypeString(type,typeString);
+//			if(typeString[0] != 0x00)
+//			{
+//				LogString("\t\t\tNumberParams[%d]\tParameter[%d] is of type (0x%08X) %s\r\n",numberParams,i,type,typeString);
+//			}
+//			//PrintParameterValue(i,type,pValues);
+//        }
+//
+//
+//		pIMetaDataImport->Release();
+//	}
+//}
+
 
 
 

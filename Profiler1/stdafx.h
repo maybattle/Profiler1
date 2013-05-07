@@ -19,6 +19,7 @@
 
 #define ATL_NO_ASSERT_ON_DESTROY_NONEXISTENT_WINDOW
 
+
 #include "resource.h"
 #include <atlbase.h>
 #include <atlcom.h>
@@ -30,13 +31,15 @@
 #include <wchar.h>
 #include "winnt.h"
 #include <corhlpr.h>
+#include <unordered_map>
 #include "CorProfilerCallback.h"
+#include "ParameterInformation.h"
 #include "FunctionInformation.h"
 #include "Logger.h"
-#include <unordered_map>
 
 
 using namespace ATL;
 using namespace std;
+
 
 

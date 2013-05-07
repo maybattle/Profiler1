@@ -4,11 +4,13 @@
 class CFunctionInformation
 {
 public:
-	CFunctionInformation(FunctionID functionId, const std::wstring& functionName);
-	const std::wstring& GetFunctionName();
+	CFunctionInformation(FunctionID functionId, const std::wstring functionName);
+	~CFunctionInformation();
+	const std::wstring GetFunctionName();
 	LONG GetCallCount();
 	void IncCallCount();
 	FunctionID GetFunctionId();
+	std::unordered_map<std::wstring, CParameterInformation*> ParameterInformations;
 
 private:
 	FunctionID _functionId;
@@ -16,3 +18,5 @@ private:
 	LONG _callCount;
 	
 };
+
+

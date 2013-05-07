@@ -11,8 +11,10 @@
 #error "Single-threaded COM objects are not properly supported on Windows CE platform, such as the Windows Mobile platforms that do not include full DCOM support. Define _CE_ALLOW_SINGLE_THREADED_OBJECTS_IN_MTA to force ATL to support creating single-thread COM object's and allow use of it's single-threaded COM object implementations. The threading model in your rgs file was set to 'Free' as that is the only threading model supported in non DCOM Windows CE platforms."
 #endif
 
-
-
+#define MAX_BUFFER_SIZE  1024
+#define MAX_FUNCTIONNAME_LENGTH  1024
+#define MAX_CLASSNAME_LENGTH 1024
+#define MAX_PARAMETERNAME_LENGTH 1024
 
 // CProfiler
 
@@ -66,7 +68,9 @@ private:
 	void AddFunctionToMap(FunctionID);
 	STDMETHOD(SetEventMask)();
 	STDMETHOD(GetFullMethodName)(FunctionID functionId, std::wstring& functionName);
-	
+	STDMETHOD(FillParameterInformations)(FunctionID functionId, std::unordered_map<std::wstring, CParameterInformation*> parameterInformations);
+	PCCOR_SIGNATURE CProfiler::ParseElementType( IMetaDataImport *metaDataImport, PCCOR_SIGNATURE signature, wstring &signatureText, INT32 *pElementType);
+
 	//Map Speichert alle Funktionen, um sie am Ende mit dem CallCount auszugeben
 	std::unordered_map<FunctionID, CFunctionInformation*> _functionInformations;
 
