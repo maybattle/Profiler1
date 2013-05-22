@@ -31,6 +31,7 @@
 #include <wchar.h>
 #include "winnt.h"
 #include <corhlpr.h>
+#include <CorHdr.h>
 #include <unordered_map>
 #include "CorProfilerCallback.h"
 #include "ParameterInformation.h"

@@ -1,7 +1,7 @@
 #pragma once
 #include "stdafx.h"
 
-CParameterInformation::CParameterInformation(const wstring name, CorElementType nativeType, INT32 position, INT32 direction=0, BOOL isReturnValue=FALSE)
+CParameterInformation::CParameterInformation(const wstring name, CorElementType nativeType, INT32 position, ParameterDirection direction, BOOL isReturnValue)
 {
 	_name = name;
 	_nativeType = nativeType;
@@ -10,7 +10,7 @@ CParameterInformation::CParameterInformation(const wstring name, CorElementType 
 	_isReturnValue = isReturnValue;
 }
 
-wstring CParameterInformation::GetName(){ return _name;};
+const wstring CParameterInformation::GetName() { return _name;};
 
 CorElementType CParameterInformation::GetNativeType(){return _nativeType;}
 

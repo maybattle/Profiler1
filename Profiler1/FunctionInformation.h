@@ -9,14 +9,19 @@ public:
 	const std::wstring GetFunctionName();
 	LONG GetCallCount();
 	void IncCallCount();
+	void SetIsStatic(BOOL isStatic);
+	BOOL GetIsStatic();
+	void SetReturnTypeInformation(CParameterInformation* pReturnTypeInformation);
+	CParameterInformation* GetReturnTypeInformation();
 	FunctionID GetFunctionId();
-	std::unordered_map<std::wstring, CParameterInformation*> ParameterInformations;
+	std::vector<CParameterInformation*> ParameterInformations;
 
 private:
 	FunctionID _functionId;
 	std::wstring _functionName;
 	LONG _callCount;
-	
+	CParameterInformation* _returnTypeInformation;
+	BOOL _isStatic;
 };
 
 

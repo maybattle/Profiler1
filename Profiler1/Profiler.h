@@ -50,11 +50,11 @@ public:
 	static UINT_PTR _stdcall FunctionMapper(FunctionID functionId, BOOL *pbHookFunction);
 
 	//Callback Funktionen
-	void Enter(FunctionIDOrClientID functionIDOrClientID);
+	//void Enter(FunctionIDOrClientID functionIDOrClientID);
 	void EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo);
-	void Leave(FunctionIDOrClientID functionIDOrClientID);
+	//void Leave(FunctionIDOrClientID functionIDOrClientID);
 	void LeaveWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo);
-	void Tailcall(FunctionIDOrClientID functionIDOrClientID);
+	//void Tailcall(FunctionIDOrClientID functionIDOrClientID);
 	void TailcallWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo);
 	
 	~CProfiler(void);
@@ -67,10 +67,10 @@ private:
 
 	void AddFunctionToMap(FunctionID);
 	STDMETHOD(SetEventMask)();
-	STDMETHOD(GetFullMethodName)(FunctionID functionId, std::wstring& functionName);
-	STDMETHOD(FillParameterInformations)(FunctionID functionId, std::unordered_map<std::wstring, CParameterInformation*> parameterInformations);
+	CFunctionInformation* CProfiler::GetFunctionInformation(FunctionID functionId);
+	wstring CProfiler::GetStringValueFromArgumentRange(COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange);
 	PCCOR_SIGNATURE CProfiler::ParseElementType( IMetaDataImport *metaDataImport, PCCOR_SIGNATURE signature, wstring &signatureText, INT32 *pElementType);
-
+	
 	//Map Speichert alle Funktionen, um sie am Ende mit dem CallCount auszugeben
 	std::unordered_map<FunctionID, CFunctionInformation*> _functionInformations;
 

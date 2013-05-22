@@ -11,11 +11,9 @@ CFunctionInformation::CFunctionInformation(FunctionID functionId, const std::wst
 }
 
 CFunctionInformation::~CFunctionInformation(){
-	std::unordered_map<std::wstring, CParameterInformation*>::iterator i;
-	for(i=ParameterInformations.begin();i != ParameterInformations.end();i++){
-		delete i->second;
-	}
+	while(!ParameterInformations.empty()) delete ParameterInformations.back(), ParameterInformations.pop_back();
 	ParameterInformations.clear();
+	if(_returnTypeInformation!=NULL) delete(_returnTypeInformation);
 }
 
 const std::wstring CFunctionInformation::GetFunctionName(){
@@ -30,6 +28,20 @@ void CFunctionInformation::IncCallCount(){
 	_callCount++;
 }
 
+BOOL CFunctionInformation::GetIsStatic(){
+	return _isStatic;
+}
+
+void CFunctionInformation::SetIsStatic(BOOL isStatic){
+	_isStatic = isStatic;
+}
+
+void CFunctionInformation::SetReturnTypeInformation(CParameterInformation* pReturnTypeInformation){
+	_returnTypeInformation = pReturnTypeInformation;
+}
+ CParameterInformation* CFunctionInformation::GetReturnTypeInformation() {
+	return _returnTypeInformation;
+}
 
 FunctionID CFunctionInformation::GetFunctionId(){
 	return _functionId;

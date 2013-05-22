@@ -11,8 +11,11 @@ namespace SampleToProfile
         static void Main(string[] args)
         {
             Console.WriteLine("Beam me up, scotty!");
-            new Beamer().Start("Beamer is active.");
+            var beamer = new Beamer();
+            beamer.Start("Beamer is active.");
             Console.WriteLine("Press Enter to stop beaming.");
+            var state = beamer.GetBeamerState();
+            Console.WriteLine(state);
             Console.ReadLine();
         }
     }
@@ -23,6 +26,10 @@ namespace SampleToProfile
         public void Start(string message)
         {
             Console.WriteLine(message);
+        }
+
+        public string GetBeamerState(){
+            return "Beamer is OK.";
         }
     }
 }

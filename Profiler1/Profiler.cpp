@@ -5,12 +5,6 @@
 CProfiler *_pICorProfilerCallback;
 
 
-void __stdcall EnterGlobal(FunctionIDOrClientID functionIDOrClientID)
-{
-    if (_pICorProfilerCallback != NULL)
-        _pICorProfilerCallback->Enter(functionIDOrClientID);
-}
-
 void __stdcall EnterGlobalWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
 {
     if (_pICorProfilerCallback != NULL)
@@ -18,23 +12,7 @@ void __stdcall EnterGlobalWithInfo(FunctionIDOrClientID functionIDOrClientID, CO
 }
 
 
-//Wird von der CLR aufgerufen
-//Manuelles sichern und Wiederherstellen der Register
-void __declspec(naked) EnterNaked3(FunctionIDOrClientID functionIDOrClientID)
-{
-    __asm
-    {
-        push eax
-        push ecx
-        push edx
-        push [esp + 16]
-        call EnterGlobal
-        pop edx
-        pop ecx
-        pop eax
-        ret 4
-    }
-}
+
 
 //Wird von der CLR aufgerufen
 //Manuelles sichern und Wiederherstellen der Register
@@ -62,11 +40,7 @@ void __declspec(naked) EnterNaked3WithInfo(FunctionIDOrClientID functionIDOrClie
 }
 
 
-void __stdcall LeaveGlobal(FunctionIDOrClientID functionIDOrClientID)
-{
-    if (_pICorProfilerCallback != NULL)
-        _pICorProfilerCallback->Leave(functionIDOrClientID);
-}
+
 
 void __stdcall LeaveGlobalWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
 {
@@ -75,23 +49,7 @@ void __stdcall LeaveGlobalWithInfo(FunctionIDOrClientID functionIDOrClientID, CO
 }
 
 
-//Wird von der CLR aufgerufen
-//Manuelles sichern und Wiederherstellen der Register
-void __declspec( naked ) LeaveNaked3(FunctionIDOrClientID functionIDOrClientID)
-{
-    __asm
-    {
-        push eax
-        push ecx
-        push edx
-        push [esp + 16]
-        call LeaveGlobal
-        pop edx
-        pop ecx
-        pop eax
-        ret 4
-    }
-}
+
 
 //Wird von der CLR aufgerufen
 //Manuelles sichern und Wiederherstellen der Register
@@ -117,36 +75,14 @@ void __declspec( naked ) LeaveNaked3WithInfo(FunctionIDOrClientID functionIDOrCl
     }
 }
 
-void __stdcall TailcallGlobal(FunctionIDOrClientID functionIDOrClientID)
-{
-    if (_pICorProfilerCallback != NULL)
-        _pICorProfilerCallback->Tailcall(functionIDOrClientID);
-}
 
 void __stdcall TailcallGlobalWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
 {
     if (_pICorProfilerCallback != NULL)
-        _pICorProfilerCallback->Tailcall(functionIDOrClientID);
+        _pICorProfilerCallback->TailcallWithInfo(functionIDOrClientID, eltInfo);
 }
 
 
-//Wird von der CLR aufgerufen
-//Manuelles sichern und Wiederherstellen der Register
-void __declspec( naked ) TailcallNaked3(FunctionIDOrClientID functionIDOrClientID)
-{
-    __asm
-    {
-        push eax
-        push ecx
-        push edx
-        push [esp + 16]
-        call TailcallGlobal
-        pop edx
-        pop ecx
-        pop eax
-        ret 4
-    }
-}
 
 //Wird von der CLR aufgerufen
 //Manuelles sichern und Wiederherstellen der Register
@@ -230,12 +166,7 @@ HRESULT CProfiler::Initialize(IUnknown *pICorProfilerInfoUnk)
         return E_FAIL;
     }
 
-    //Events setzen, um der CLR mitzuteilen an welchen Informationen man intessiert ist.
-    hr = SetEventMask();
-    if (FAILED(hr)){
-        _pICorProfilerInfo->SetEventMask(COR_PRF_MONITOR_NONE);
-        return E_FAIL;
-    }
+   
     
     //Setzen des FunctionID Mappers
     //Wird von CLR aufgerufen, wenn sich FunctionIDs aendern. 
@@ -244,6 +175,13 @@ HRESULT CProfiler::Initialize(IUnknown *pICorProfilerInfoUnk)
     hr = _pICorProfilerInfo3->SetFunctionIDMapper(FunctionMapper);
     if (FAILED(hr)){
         _logger->WriteStringToLogFormat("SetFunctionIDMapper failed\r\n");
+        return E_FAIL;
+    }
+
+	 //Events setzen, um der CLR mitzuteilen an welchen Informationen man intessiert ist.
+    hr = SetEventMask();
+    if (FAILED(hr)){
+        _pICorProfilerInfo->SetEventMask(COR_PRF_MONITOR_NONE);
         return E_FAIL;
     }
 
@@ -282,30 +220,38 @@ void CProfiler::EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF
     {
         functionInformation = (iter->second);
         functionInformation->IncCallCount();
-        if(functionInformation->GetFunctionName().find(L"SampleToProfile.Beamer.Start")!=std::wstring::npos){
-			COR_PRF_FRAME_INFO frameInfo;
-			ULONG cbArgumentInfo=0;
-			COR_PRF_FUNCTION_ARGUMENT_INFO *pArgumentInfo;
-			//Function muss 2mal aufgerufen werden. 
-			//Das erste Mal mit cbArgumentInfo=0, pArgumentInfo=NULL
-			//als Ergebnis steht in cbArgumentInfo die Groeße des Speicherbereiches der Funktionsargumente und die Funktion liefert FAILED(hr)
-			//Das zweite Mal mit dem Ergebnis von cbArgumentInfo des ersten Aufrufs und dem entsprechend grossen Speicherbereich von pArgumentInfo
-			HRESULT hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID,eltInfo,	&frameInfo, &cbArgumentInfo,NULL);
-			if(FAILED(hr) && cbArgumentInfo>0){
-				pArgumentInfo = new COR_PRF_FUNCTION_ARGUMENT_INFO[cbArgumentInfo];
-				hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID,eltInfo,	&frameInfo, &cbArgumentInfo,pArgumentInfo);
-				if(SUCCEEDED(hr)) {
-					_logger->WriteStringToLogFormat("Number of arguments is:%lu",pArgumentInfo->numRanges);
+		WCHAR fName[] = L"System.Data.SqlClient.SqlCommand.GetCommandText";
+		/*WCHAR fName[] = L"SampleToProfile.Beamer.Start";*/
+  //      if(functionInformation->GetFunctionName().find(fName)!=std::wstring::npos){
+		//	_logger->WriteStringToLogFormat("IsStatic: %s\r\n",functionInformation->GetIsStatic()==TRUE?"True":"False");
+		//	COR_PRF_FRAME_INFO frameInfo;
+		//	ULONG cbArgumentInfo=0;
+		//	COR_PRF_FUNCTION_ARGUMENT_INFO *pArgumentInfo;
+		//	//Function muss 2mal aufgerufen werden. 
+		//	//Das erste Mal mit cbArgumentInfo=0, pArgumentInfo=NULL
+		//	//als Ergebnis steht in cbArgumentInfo die Groeße des Speicherbereiches der Funktionsargumente und die Funktion liefert FAILED(hr)
+		//	//Das zweite Mal mit dem Ergebnis von cbArgumentInfo des ersten Aufrufs und dem entsprechend grossen Speicherbereich von pArgumentInfo
+		//	HRESULT hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID, eltInfo,	&frameInfo, &cbArgumentInfo,NULL);
+		//	if(FAILED(hr) && cbArgumentInfo>0){
+		//		pArgumentInfo = new COR_PRF_FUNCTION_ARGUMENT_INFO[cbArgumentInfo];
+		//		hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID,eltInfo,	&frameInfo, &cbArgumentInfo,pArgumentInfo);
+		//		if(SUCCEEDED(hr)) {
+		//			_logger->WriteStringToLogFormat("Number of arguments is:%lu\r\n",pArgumentInfo->numRanges);
+		//			for(int i=0;i<pArgumentInfo->numRanges-1; i++){
+		//				
+		//				functionInformation->ParameterInformations.size();
+		//				_logger->WriteStringToLogFormat("Parameter position:%d, Type:%S\r\n",i, functionInformation->ParameterInformations[i]->GetName().c_str());
+		//			}
 
-				}
-				else{
-					_logger->WriteStringToLogFormat("Error get parameter info for function:%S",functionInformation->GetFunctionName().c_str());		
-				}
-			}
-			
-			_logger->WriteStringToLogFormat("cbArgumentInfo:%d",cbArgumentInfo);		
+		//		}
+		//		else{
+		//			_logger->WriteStringToLogFormat("Error get parameter info for function:%S",functionInformation->GetFunctionName().c_str());		
+		//		}
+		//	}
+		//	
+		//	_logger->WriteStringToLogFormat("cbArgumentInfo:%d",cbArgumentInfo);		
 
-		}
+		//}
 
     /*    int padCharCount = _callStackSize * 2;
         if (padCharCount > 0)
@@ -329,64 +275,41 @@ void CProfiler::EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF
     _callStackSize++;
 }
 
-void CProfiler::Enter(FunctionIDOrClientID functionIDOrClientID)
-{
-    /*CFunctionInformation* functionInformation = NULL;
-    std::unordered_map<FunctionID, CFunctionInformation*>::iterator 
-        iter = _functionInformations.find(functionIDOrClientID.functionID);
-    
-	
-    if (iter != _functionInformations.end())
-    {
-        functionInformation = (iter->second);
-        functionInformation->IncCallCount();
-        
-        int padCharCount = _callStackSize * 2;
-        if (padCharCount > 0)
-        {
-            char* padding = new char[(padCharCount) + 1];
-            memset(padding, 0, padCharCount + 1);
-            memset(padding, '.', padCharCount);
-            _logger-> WriteStringToLogFormat("Enter function name:%s%S, id=%d\r\n", 
-                padding, functionInformation->GetFunctionName().c_str(), 
-                functionInformation->GetFunctionId());
-            delete[] padding;
-        }
-        else
-        {
-            _logger->WriteStringToLogFormat("Enter function name:%S, id=%d\r\n", 
-                functionInformation->GetFunctionName().c_str(), 
-                functionInformation->GetFunctionId());
-        }
-    }
-    else _logger->WriteStringToLogFormat("Function:%i not found.", functionIDOrClientID);*/
-    _callStackSize++;
-}
-
-
-void CProfiler::Leave(FunctionIDOrClientID functionIDOrClientID)
-{
-    if (_callStackSize > 0)
-    {
-        _callStackSize--;
-    }
-}
 
 void CProfiler::LeaveWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
 {
-    if (_callStackSize > 0)
+   
+	WCHAR fName[] = L"System.Data.SqlClient.SqlCommand.get_CommandText";
+    //WCHAR fName[] = L"SampleToProfile.Beamer.GetBeamerState";
+	CFunctionInformation* functionInformation = NULL;
+    std::unordered_map<FunctionID, CFunctionInformation*>::iterator 
+    iter = _functionInformations.find(functionIDOrClientID.functionID);
+	if (iter != _functionInformations.end())
+    {
+        functionInformation = (iter->second);
+		if(functionInformation->GetFunctionName().find(fName)!=std::wstring::npos){
+			COR_PRF_FRAME_INFO frameInfo;
+			COR_PRF_FUNCTION_ARGUMENT_RANGE retvalRange;
+			
+			HRESULT hr=_pICorProfilerInfo3->GetFunctionLeave3Info(functionIDOrClientID.functionID, eltInfo,	&frameInfo, &retvalRange);
+			if(SUCCEEDED(hr)){
+				if((functionInformation->GetReturnTypeInformation())->GetNativeType()==CorElementType::ELEMENT_TYPE_STRING){
+					wstring value = GetStringValueFromArgumentRange(&retvalRange);
+					_logger->WriteStringToLogFormat("Return value for function:%S is:%S\r\n",functionInformation->GetFunctionName().c_str(), value.c_str());		
+				}
+			}
+			else{
+				_logger->WriteStringToLogFormat("Error get return value for function:%S\r\n",functionInformation->GetFunctionName().c_str());		
+			}
+		}
+	}
+	
+	if (_callStackSize > 0)
     {
         _callStackSize--;
     }
 }
 
-void CProfiler::Tailcall(FunctionIDOrClientID functionIDOrClientID)
-{
-    if (_callStackSize > 0)
-    {
-        _callStackSize--;
-    }
-}
 
 void CProfiler::TailcallWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
 {
@@ -394,6 +317,30 @@ void CProfiler::TailcallWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_
     {
         _callStackSize--;
     }
+}
+
+
+wstring CProfiler::GetStringValueFromArgumentRange(COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange){
+	if(argumentRange== NULL) return NULL;
+	string returnValue;
+	ULONG pBufferLengthOffset;
+	ULONG pStringLengthOffset;
+	ULONG pBufferOffset;
+	_pICorProfilerInfo3->GetStringLayout(&pBufferLengthOffset, &pStringLengthOffset, &pBufferOffset);
+	ObjectID stringOID;
+	memcpy(&stringOID,((const void*)(argumentRange->startAddress)),argumentRange->length);
+	DWORD stringLength;
+	memcpy(&stringLength,((const void*)(stringOID+pStringLengthOffset)),sizeof(DWORD));
+
+	WCHAR parameterValue[100000];
+	memcpy(parameterValue,((const void*)(stringOID+pBufferOffset)),stringLength * sizeof(DWORD));
+	parameterValue[stringLength*sizeof(DWORD)]= '\0';
+	//convert WCHAR to char
+	/*char narrowTempParameterValue[100000];
+	UINT narrowTempParameterValueLength=0;
+	wcstombs_s(&narrowTempParameterValueLength,narrowTempParameterValue,wcslen(tempParameterValue)+1,tempParameterValue,_TRUNCATE);
+	returnValue = narrowTempParameterValue;*/
+	return parameterValue;
 }
 
 
@@ -415,6 +362,7 @@ STDMETHODIMP CProfiler::Shutdown()
 	return S_OK;
 }
 
+
 UINT_PTR CProfiler::FunctionMapper(FunctionID functionID, BOOL *pbHookFunction)
 {
     if (_pICorProfilerCallback != NULL)
@@ -431,34 +379,27 @@ void CProfiler::AddFunctionToMap(FunctionID functionID)
 	if (iter == _functionInformations.end())
 	{
 		std::wstring functionName;
-		
-		HRESULT hr = GetFullMethodName(functionID, functionName); 
-		if (FAILED(hr))
+		CFunctionInformation* characteristics;
+		characteristics = GetFunctionInformation(functionID); 
+		if (characteristics==NULL)
 		{
-			_logger->WriteStringToLogFormat("Could not find name for functionID:%d\r\n",functionID);
+			_logger->WriteStringToLogFormat("Unable to assign function information for functionID:%d\r\n",functionID);
 			return;
 		}	
-		CFunctionInformation* characteristics;
-		characteristics = new CFunctionInformation(functionID, functionName);
-		FillParameterInformations(functionID,characteristics->ParameterInformations);
 		_functionInformations.insert(std::pair<FunctionID, CFunctionInformation*>(functionID, characteristics));
 	}
 }
 
 
-HRESULT CProfiler::FillParameterInformations(FunctionID functionId, std::unordered_map<std::wstring,CParameterInformation*> parameterInformations){
-
-	return S_OK;
-}
-
 //Methodenname aus functionId ermitteln
-HRESULT CProfiler::GetFullMethodName(FunctionID functionId, std::wstring &functionName)
-{
+CFunctionInformation* CProfiler::GetFunctionInformation(FunctionID functionId)
+ {
     IMetaDataImport* pIMetaDataImport = 0;
     HRESULT hr = S_OK;
     mdToken funcToken = 0;
     WCHAR szFunction[MAX_CLASSNAME_LENGTH];
     WCHAR szClass[MAX_CLASSNAME_LENGTH];
+	CFunctionInformation* characteristics = NULL;
 
     //Hier werden das Metadata Token und die Metadata Instanz geholt, 
     //um anschliessend mit der Metadata API den Functionsnamen zu ermitteln
@@ -496,25 +437,29 @@ HRESULT CProfiler::GetFullMethodName(FunctionID functionId, std::wstring &functi
             hr = pIMetaDataImport->GetTypeDefProps(classTypeDef, szClass, MAX_CLASSNAME_LENGTH, &cchClass, 0, 0);
             if (SUCCEEDED(hr))
             {
-                //Kompletten Name aus ClassName und FunctionName erstellen
+				//Kompletten Name aus ClassName und FunctionName erstellen
                 size_t length = MAX_CLASSNAME_LENGTH*2;
                 WCHAR fullFunctionName[MAX_CLASSNAME_LENGTH];
                 _snwprintf_s(fullFunctionName,length,L"%s.%s",szClass,szFunction);
-                functionName = fullFunctionName;
-				//PBYTE pParamStart = (PBYTE)pMethodSigBlob + 2;
-				//PBYTE pCurrent = pParamStart;
+                characteristics = new CFunctionInformation(functionId,fullFunctionName);
+				characteristics->SetIsStatic((dwAttr & mdStatic)==mdStatic);
 				ULONG callConvention;
 				ULONG argumentCount = 0;
-				std::wstring parameterName;
 				INT32 typeAsEnum;
+
 				pMethodSigBlob += CorSigUncompressData( pMethodSigBlob, &callConvention);
 				if ( callConvention != IMAGE_CEE_CS_CALLCONV_FIELD) {
 					pMethodSigBlob += CorSigUncompressData(pMethodSigBlob,&argumentCount);
-					pMethodSigBlob = ParseElementType( pIMetaDataImport, pMethodSigBlob, parameterName, &typeAsEnum);	
-					_logger->WriteStringToLogFormat("FunctionName:%S\tReturnType:%S\r\n",functionName.c_str(),parameterName.c_str());
+					std::wstring returnValueTypeName;
+					pMethodSigBlob = ParseElementType(pIMetaDataImport, pMethodSigBlob, returnValueTypeName, &typeAsEnum);	
+					CParameterInformation* pReturnTypeInformation = new CParameterInformation(returnValueTypeName,(CorElementType)typeAsEnum,0,DIRECTION_OUT,TRUE);
+					characteristics->SetReturnTypeInformation(pReturnTypeInformation);
+					
 					for (ULONG i=0; i<argumentCount; i++){
-						pMethodSigBlob = ParseElementType( pIMetaDataImport, pMethodSigBlob, parameterName, &typeAsEnum);	
-						_logger->WriteStringToLogFormat("FunctionName:%S\tParameter:%S\r\n",functionName.c_str(),parameterName.c_str());
+						std::wstring parameterTypeName;
+						pMethodSigBlob = ParseElementType( pIMetaDataImport, pMethodSigBlob, parameterTypeName, &typeAsEnum);	
+						CParameterInformation* pParameterInformation = new CParameterInformation(parameterTypeName,(CorElementType)typeAsEnum,i);
+						characteristics->ParameterInformations.push_back(pParameterInformation);
 					}
 				}
             }
@@ -522,7 +467,7 @@ HRESULT CProfiler::GetFullMethodName(FunctionID functionId, std::wstring &functi
         //WICHTIG: abschliessend immer Release aufrufen.
         pIMetaDataImport->Release();
     }
-    return hr;
+    return characteristics;
 }
 
 
@@ -732,6 +677,9 @@ PCCOR_SIGNATURE CProfiler::ParseElementType(IMetaDataImport *metaDataImport, PCC
 	return signature;
 }
 
+
+
+
 //void CProfiler::PrintFunctionArguments (FunctionID functionId, COR_PRF_FRAME_INFO func, COR_PRF_FUNCTION_ARGUMENT_RANGE* range)
 //{
 //	
@@ -849,7 +797,7 @@ HRESULT CProfiler::SetEventMask()
     DWORD eventMask = (DWORD) (COR_PRF_MONITOR_ENTERLEAVE | COR_PRF_ENABLE_FUNCTION_ARGS | COR_PRF_ENABLE_FUNCTION_RETVAL);
     _logger->WriteStringToLogFormat("Set EventMask to COR_PRF_MONITOR_ENTERLEAVE | COR_PRF_ENABLE_FUNCTION_ARGS | COR_PRF_ENABLE_FUNCTION_RETVAL\r\n");
 
-    return _pICorProfilerInfo->SetEventMask(eventMask);
+    return _pICorProfilerInfo3->SetEventMask(eventMask);
 }
 
 
