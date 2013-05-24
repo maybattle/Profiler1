@@ -49,12 +49,9 @@ public:
 	//Zu den FunctionIDs werden die Funktionsnamen ermittelt und zusammen mit der FunctionID in einer Map gespeichert
 	static UINT_PTR _stdcall FunctionMapper(FunctionID functionId, BOOL *pbHookFunction);
 
-	//Callback Funktionen
-	//void Enter(FunctionIDOrClientID functionIDOrClientID);
+	//Callback Funktionen, jedoch nicht mehr die einfachen Funktionen sondern die erweiterten Funktionen, um die Parameter auszuwerten
 	void EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo);
-	//void Leave(FunctionIDOrClientID functionIDOrClientID);
 	void LeaveWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo);
-	//void Tailcall(FunctionIDOrClientID functionIDOrClientID);
 	void TailcallWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo);
 	
 	~CProfiler(void);
@@ -68,8 +65,15 @@ private:
 	void AddFunctionToMap(FunctionID);
 	STDMETHOD(SetEventMask)();
 	CFunctionInformation* CProfiler::GetFunctionInformation(FunctionID functionId);
+
+	//Funktionen um die Werte der Uebergabe - Rueckgabeparameter zu ermitteln
+	//Wir beschraenken uns auf String, Int32 und DateTime (INT64)
 	wstring CProfiler::GetStringValueFromArgumentRange(const COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange);
+	wstring CProfiler::GetStringValueFromArgument(ObjectID stringOID);
 	INT32 CProfiler::GetInt32ValueFromArgumentRange(const COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange);
+	INT64 CProfiler::GetDateTimeValueFromArgumentRange(const COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange);
+	INT64 CProfiler::GetDateTimeValueFromArgument(UINT_PTR startAddress);
+
 	PCCOR_SIGNATURE CProfiler::ParseElementType( IMetaDataImport *metaDataImport, PCCOR_SIGNATURE signature, wstring &signatureText, INT32 *pElementType);
 	
 	//Map Speichert alle Funktionen, um sie am Ende mit dem CallCount auszugeben

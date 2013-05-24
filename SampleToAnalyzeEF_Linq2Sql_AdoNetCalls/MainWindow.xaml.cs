@@ -46,28 +46,7 @@ namespace SampleToAnalyzeEF_Linq2Sql_AdoNetCalls
             }
         }
 
-        private void RunAdoNetSampleButton_Click(object sender, RoutedEventArgs e){
-            ResultTextBox.Text = string.Empty;
-            var conStrName = "SampleToAnalyzeEF_Linq2Sql_AdoNetCalls.Properties.Settings.Test_RalfConnectionString";
-            var connStr = ConfigurationManager.ConnectionStrings[conStrName].ConnectionString;
-            var conn = new SqlConnection(connStr);
-            var cmd = conn.CreateCommand();
-            cmd.CommandText = "select Id, OrderName, OrderDate, Total from [dbo].[Order] where Id>@Id";
-            cmd.Parameters.Add("@Id", SqlDbType.Int).Value = 1;
-            conn.Open();
-            var reader = cmd.ExecuteReader(CommandBehavior.CloseConnection);
-            {
-                while (reader.Read()){
-                    var line = CreateResultTextLine(Convert.ToInt32(reader["Id"]),
-                                                    (string) reader["OrderName"],
-                                                    Convert.ToDateTime(reader["OrderDate"]),
-                                                    Convert.ToDecimal(reader["Total"]));
-                    ResultTextBox.Text += line;
-                }
-            }
-
-        }
-
+      
         private static string CreateResultTextLine(int id, string name, DateTime? date, decimal? total){
             return string.Format("{0} - {1} - {2} - {3}\n", id, name, 
                 date.HasValue?date.Value:DateTime.MinValue, 

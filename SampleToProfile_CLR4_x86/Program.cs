@@ -16,7 +16,7 @@ namespace SampleToProfile
             Console.WriteLine("Press Enter to stop beaming.");
             var state = beamer.GetBeamerState();
             Console.WriteLine(state);
-            beamer.Beam(1);
+            beamer.Beam("James T. Kirk");
             Console.ReadLine();
         }
     }
