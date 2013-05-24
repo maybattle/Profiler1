@@ -22,7 +22,7 @@ namespace SampleToAnalyzeEF_Linq2Sql_AdoNetCalls
         private void RunEF4SampleButton_Click(object sender, RoutedEventArgs e){
             ResultTextBox.Text = string.Empty;
             using (var ctx = new Test_RalfEntities()){
-                var result = ctx.Order.Where(n => n.Id > 1);
+                var result = ctx.Order.Where(n => n.Id > 0 && n.OrderDate>new DateTime(2012,12,21) && n.OrderName!="Order2");
                 foreach (var order in result){
                     var line = CreateResultTextLine(order.Id, order.OrderName, order.OrderDate, order.Total);
                     ResultTextBox.Text += line;
@@ -37,7 +37,7 @@ namespace SampleToAnalyzeEF_Linq2Sql_AdoNetCalls
             ResultTextBox.Text = string.Empty;
             using (var ctx = new OrderModelsLinqDataContext())
             {
-                var result = ctx.LinqOrders.Where(n => n.Id > 1);
+                var result = ctx.LinqOrders.Where(n => n.Id > 0 && n.OrderDate > new DateTime(2012, 12, 21) && n.OrderName != "Order2");
                 foreach (var order in result)
                 {
                     var line = CreateResultTextLine(order.Id, order.OrderName, order.OrderDate, order.Total);

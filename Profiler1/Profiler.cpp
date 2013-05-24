@@ -219,57 +219,93 @@ void CProfiler::EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF
     if (iter != _functionInformations.end())
     {
         functionInformation = (iter->second);
-        functionInformation->IncCallCount();
-		WCHAR fName[] = L"System.Data.SqlClient.SqlCommand.GetCommandText";
-		/*WCHAR fName[] = L"SampleToProfile.Beamer.Start";*/
-  //      if(functionInformation->GetFunctionName().find(fName)!=std::wstring::npos){
-		//	_logger->WriteStringToLogFormat("IsStatic: %s\r\n",functionInformation->GetIsStatic()==TRUE?"True":"False");
-		//	COR_PRF_FRAME_INFO frameInfo;
-		//	ULONG cbArgumentInfo=0;
-		//	COR_PRF_FUNCTION_ARGUMENT_INFO *pArgumentInfo;
-		//	//Function muss 2mal aufgerufen werden. 
-		//	//Das erste Mal mit cbArgumentInfo=0, pArgumentInfo=NULL
-		//	//als Ergebnis steht in cbArgumentInfo die Groeße des Speicherbereiches der Funktionsargumente und die Funktion liefert FAILED(hr)
-		//	//Das zweite Mal mit dem Ergebnis von cbArgumentInfo des ersten Aufrufs und dem entsprechend grossen Speicherbereich von pArgumentInfo
-		//	HRESULT hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID, eltInfo,	&frameInfo, &cbArgumentInfo,NULL);
-		//	if(FAILED(hr) && cbArgumentInfo>0){
-		//		pArgumentInfo = new COR_PRF_FUNCTION_ARGUMENT_INFO[cbArgumentInfo];
-		//		hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID,eltInfo,	&frameInfo, &cbArgumentInfo,pArgumentInfo);
-		//		if(SUCCEEDED(hr)) {
-		//			_logger->WriteStringToLogFormat("Number of arguments is:%lu\r\n",pArgumentInfo->numRanges);
-		//			for(int i=0;i<pArgumentInfo->numRanges-1; i++){
-		//				
-		//				functionInformation->ParameterInformations.size();
-		//				_logger->WriteStringToLogFormat("Parameter position:%d, Type:%S\r\n",i, functionInformation->ParameterInformations[i]->GetName().c_str());
-		//			}
+		functionInformation->IncCallCount();
+		//die gleiche Funktion kann aufgrund der Vererbungshierachie mehrmals aufgerufen werden. 
+		//Es soll aber nur der erste Aufruf zur Ausgabe des Parameters herangezogen werden.
+		if(functionInformation->GetCallCount()>1) return;
+		//WCHAR fName[] = L"System.Data.SqlClient.SqlCommand.set_CommandText";
+		//WCHAR fName[] = L"SampleToProfile.Beamer.Start";
+		//WCHAR fName[] = L"System.Data.SqlClient.SqlParameter.set_Value";
+		WCHAR fName[] = L"SampleToProfile.Beamer.Beam";
 
-		//		}
-		//		else{
-		//			_logger->WriteStringToLogFormat("Error get parameter info for function:%S",functionInformation->GetFunctionName().c_str());		
-		//		}
-		//	}
-		//	
-		//	_logger->WriteStringToLogFormat("cbArgumentInfo:%d",cbArgumentInfo);		
+        if(functionInformation->GetFunctionName().find(fName)!=std::wstring::npos){
+			COR_PRF_FRAME_INFO frameInfo;
+			ULONG cbArgumentInfo=0;
+			COR_PRF_FUNCTION_ARGUMENT_INFO *pArgumentInfo;
+			//Function muss 2mal aufgerufen werden. 
+			//Das erste Mal mit cbArgumentInfo=0, pArgumentInfo=NULL
+			//als Ergebnis steht in cbArgumentInfo die Groeße des Speicherbereiches der Funktionsargumente und die Funktion liefert FAILED(hr)
+			//Das zweite Mal mit dem Ergebnis von cbArgumentInfo des ersten Aufrufs und dem entsprechend grossen Speicherbereich von pArgumentInfo
+			HRESULT hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID, eltInfo,	&frameInfo, &cbArgumentInfo,NULL);
+			if(FAILED(hr) && cbArgumentInfo>0){
+				pArgumentInfo = new COR_PRF_FUNCTION_ARGUMENT_INFO[cbArgumentInfo];
+				hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID,eltInfo,	&frameInfo, &cbArgumentInfo,pArgumentInfo);
+				if(SUCCEEDED(hr)) {
+					_logger->WriteStringToLogFormat("Number of arguments is:%lu\r\n",pArgumentInfo->numRanges);
 
-		//}
+					//bei nicht statischen Funktionen, wird als erstes Argument immer der this Zeiger übergeben
+					int argumentStartIndex = functionInformation->GetIsStatic()==TRUE?0:1;
+					for(int i=argumentStartIndex;i<pArgumentInfo->numRanges; i++){
+						
+						_logger->WriteStringToLogFormat("Parameter value for function:%S is:",functionInformation->GetFunctionName().c_str());
+						switch(functionInformation->ParameterInformations[i-argumentStartIndex]->GetNativeType()){
+							case CorElementType::ELEMENT_TYPE_STRING:{
+									wstring value = GetStringValueFromArgumentRange(&(pArgumentInfo->ranges[i]));
+									_logger->WriteStringToLogFormat("%S\r\n",value.c_str());
+									break;
+								}
+						
+							case CorElementType::ELEMENT_TYPE_I4:{
+									int value = GetInt32ValueFromArgumentRange(&(pArgumentInfo->ranges[i]));
+									_logger->WriteStringToLogFormat("%d\r\n",value);
+									break;
+								}
+							
+							case CorElementType::ELEMENT_TYPE_OBJECT:{
+									ObjectID objectID;
+									memcpy(&objectID,((const void*)(pArgumentInfo->ranges[i].startAddress)),pArgumentInfo->ranges[i].length);
+									ClassID classID;
+									_pICorProfilerInfo3->GetClassFromObject(objectID, &classID);
+									ULONG32 pBufferOffset;
+									_pICorProfilerInfo3->GetBoxClassLayout(classID, &pBufferOffset);
+									
+									ModuleID ModuleID;
+									mdTypeDef mdTypeDefToken;
+									_pICorProfilerInfo3->GetClassIDInfo(classID,&ModuleID, &mdTypeDefToken);
+									 IMetaDataImport* pIMetaDataImport = 0;
+									 hr = _pICorProfilerInfo->GetTokenAndMetaDataFromFunction(functionIDOrClientID.functionID, 
+													IID_IMetaDataImport, (LPUNKNOWN *) &pIMetaDataImport, 0);
+									 
+									 _logger->WriteStringToLogFormat("Got MD Pointer\r\n");
+									 WCHAR szClass[MAX_CLASSNAME_LENGTH];
+									 ULONG cchClass;
+									 pIMetaDataImport->GetTypeDefProps(mdTypeDefToken,szClass, MAX_CLASSNAME_LENGTH, &cchClass, 0, 0);
+									 _logger->WriteStringToLogFormat("Called GetTypeDefProps\r\n");
+									 wstring name = L"Hurz";
+									 _logger->WriteStringToLogFormat("Boxed type name %ud\r\n",cchClass);
+									 //pIMetaDataImport->Release();
+									INT32 value;
+									memcpy(&value,((const void*)(objectID+pBufferOffset)),sizeof(INT32));
+									_logger->WriteStringToLogFormat("%d\r\n",value);
+									break;
+								}
+						}
+						
+						
 
-    /*    int padCharCount = _callStackSize * 2;
-        if (padCharCount > 0)
-        {
-            char* padding = new char[(padCharCount) + 1];
-            memset(padding, 0, padCharCount + 1);
-            memset(padding, '.', padCharCount);
-            _logger-> WriteStringToLogFormat("Enter function name:%s%S, id=%d\r\n", 
-                padding, functionInformation->GetFunctionName().c_str(), 
-                functionInformation->GetFunctionId());
-            delete[] padding;
-        }
-        else
-        {
-            _logger->WriteStringToLogFormat("Enter function name:%S, id=%d\r\n", 
-                functionInformation->GetFunctionName().c_str(), 
-                functionInformation->GetFunctionId());
-        }*/
+					}
+
+				}
+				else{
+					_logger->WriteStringToLogFormat("Error get parameter info for function:%S",functionInformation->GetFunctionName().c_str());		
+				}
+			}
+			
+			_logger->WriteStringToLogFormat("cbArgumentInfo:%d",cbArgumentInfo);		
+
+		}
+
+   
     }
     else _logger->WriteStringToLogFormat("Function:%i not found.", functionIDOrClientID);
     _callStackSize++;
@@ -279,31 +315,31 @@ void CProfiler::EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF
 void CProfiler::LeaveWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
 {
    
-	WCHAR fName[] = L"System.Data.SqlClient.SqlCommand.get_CommandText";
-    //WCHAR fName[] = L"SampleToProfile.Beamer.GetBeamerState";
-	CFunctionInformation* functionInformation = NULL;
-    std::unordered_map<FunctionID, CFunctionInformation*>::iterator 
-    iter = _functionInformations.find(functionIDOrClientID.functionID);
-	if (iter != _functionInformations.end())
-    {
-        functionInformation = (iter->second);
-		if(functionInformation->GetFunctionName().find(fName)!=std::wstring::npos){
-			COR_PRF_FRAME_INFO frameInfo;
-			COR_PRF_FUNCTION_ARGUMENT_RANGE retvalRange;
-			
-			HRESULT hr=_pICorProfilerInfo3->GetFunctionLeave3Info(functionIDOrClientID.functionID, eltInfo,	&frameInfo, &retvalRange);
-			if(SUCCEEDED(hr)){
-				if((functionInformation->GetReturnTypeInformation())->GetNativeType()==CorElementType::ELEMENT_TYPE_STRING){
-					wstring value = GetStringValueFromArgumentRange(&retvalRange);
-					_logger->WriteStringToLogFormat("Return value for function:%S is:%S\r\n",functionInformation->GetFunctionName().c_str(), value.c_str());		
-				}
-			}
-			else{
-				_logger->WriteStringToLogFormat("Error get return value for function:%S\r\n",functionInformation->GetFunctionName().c_str());		
-			}
-		}
-	}
-	
+	//WCHAR fName[] = L"System.Data.SqlClient.SqlCommand.get_CommandText";
+ //   //WCHAR fName[] = L"SampleToProfile.Beamer.GetBeamerState";
+	//CFunctionInformation* functionInformation = NULL;
+ //   std::unordered_map<FunctionID, CFunctionInformation*>::iterator 
+ //   iter = _functionInformations.find(functionIDOrClientID.functionID);
+	//if (iter != _functionInformations.end())
+ //   {
+ //       functionInformation = (iter->second);
+	//	if(functionInformation->GetFunctionName().find(fName)!=std::wstring::npos){
+	//		COR_PRF_FRAME_INFO frameInfo;
+	//		COR_PRF_FUNCTION_ARGUMENT_RANGE retvalRange;
+	//		
+	//		HRESULT hr=_pICorProfilerInfo3->GetFunctionLeave3Info(functionIDOrClientID.functionID, eltInfo,	&frameInfo, &retvalRange);
+	//		if(SUCCEEDED(hr)){
+	//			if((functionInformation->GetReturnTypeInformation())->GetNativeType()==CorElementType::ELEMENT_TYPE_STRING){
+	//				wstring value = GetStringValueFromArgumentRange(&retvalRange);
+	//				_logger->WriteStringToLogFormat("Return value for function:%S is:%S\r\n",functionInformation->GetFunctionName().c_str(), value.c_str());		
+	//			}
+	//		}
+	//		else{
+	//			_logger->WriteStringToLogFormat("Error get return value for function:%S\r\n",functionInformation->GetFunctionName().c_str());		
+	//		}
+	//	}
+	//}
+	//
 	if (_callStackSize > 0)
     {
         _callStackSize--;
@@ -320,7 +356,7 @@ void CProfiler::TailcallWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_
 }
 
 
-wstring CProfiler::GetStringValueFromArgumentRange(COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange){
+wstring CProfiler::GetStringValueFromArgumentRange(const COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange){
 	if(argumentRange== NULL) return NULL;
 	string returnValue;
 	ULONG pBufferLengthOffset;
@@ -335,25 +371,26 @@ wstring CProfiler::GetStringValueFromArgumentRange(COR_PRF_FUNCTION_ARGUMENT_RAN
 	WCHAR parameterValue[100000];
 	memcpy(parameterValue,((const void*)(stringOID+pBufferOffset)),stringLength * sizeof(DWORD));
 	parameterValue[stringLength*sizeof(DWORD)]= '\0';
-	//convert WCHAR to char
-	/*char narrowTempParameterValue[100000];
-	UINT narrowTempParameterValueLength=0;
-	wcstombs_s(&narrowTempParameterValueLength,narrowTempParameterValue,wcslen(tempParameterValue)+1,tempParameterValue,_TRUNCATE);
-	returnValue = narrowTempParameterValue;*/
-	return parameterValue;
+		return parameterValue;
 }
 
+
+INT32 CProfiler::GetInt32ValueFromArgumentRange(const COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange){
+	INT32 value;
+	memcpy(&value,(void*)argumentRange->startAddress,argumentRange->length);
+	return value;
+}
 
 ///Von der CLR aufgerufen, wenn der Profiler beendet wird.
 STDMETHODIMP CProfiler::Shutdown()
 {
-	_logger->WriteStringToLogFormat("Write full function list\r\n"); 
+	//_logger->WriteStringToLogFormat("Write full function list\r\n"); 
 	std::unordered_map<FunctionID, CFunctionInformation*>::iterator i;
 	for (i = _functionInformations.begin(); i != _functionInformations.end(); i++){
 		CFunctionInformation* functionCharacteristics = i->second;
-		_logger->WriteStringToLogFormat("%S : call count = %d\r\n", 
-			functionCharacteristics->GetFunctionName().c_str(),
-			functionCharacteristics->GetCallCount());
+		//_logger->WriteStringToLogFormat("%S : call count = %d\r\n", 
+			//functionCharacteristics->GetFunctionName().c_str(),
+			//functionCharacteristics->GetCallCount());
 		delete i->second;
 	}
 	_functionInformations.clear();
@@ -391,7 +428,7 @@ void CProfiler::AddFunctionToMap(FunctionID functionID)
 }
 
 
-//Methodenname aus functionId ermitteln
+//Methodeninformationen (Name, Parameter, Rueckgabewert) aus functionId ermitteln
 CFunctionInformation* CProfiler::GetFunctionInformation(FunctionID functionId)
  {
     IMetaDataImport* pIMetaDataImport = 0;
@@ -469,11 +506,6 @@ CFunctionInformation* CProfiler::GetFunctionInformation(FunctionID functionId)
     }
     return characteristics;
 }
-
-
-
-
-
 
 
 PCCOR_SIGNATURE CProfiler::ParseElementType(IMetaDataImport *metaDataImport, PCCOR_SIGNATURE signature, wstring &signatureText, INT32 *pElementType)

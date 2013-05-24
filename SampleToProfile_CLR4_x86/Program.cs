@@ -16,6 +16,7 @@ namespace SampleToProfile
             Console.WriteLine("Press Enter to stop beaming.");
             var state = beamer.GetBeamerState();
             Console.WriteLine(state);
+            beamer.Beam(1);
             Console.ReadLine();
         }
     }
@@ -30,6 +31,10 @@ namespace SampleToProfile
 
         public string GetBeamerState(){
             return "Beamer is OK.";
+        }
+
+        public object Beam(object objectToBeam){
+            return objectToBeam;
         }
     }
 }

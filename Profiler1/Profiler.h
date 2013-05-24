@@ -68,7 +68,8 @@ private:
 	void AddFunctionToMap(FunctionID);
 	STDMETHOD(SetEventMask)();
 	CFunctionInformation* CProfiler::GetFunctionInformation(FunctionID functionId);
-	wstring CProfiler::GetStringValueFromArgumentRange(COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange);
+	wstring CProfiler::GetStringValueFromArgumentRange(const COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange);
+	INT32 CProfiler::GetInt32ValueFromArgumentRange(const COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange);
 	PCCOR_SIGNATURE CProfiler::ParseElementType( IMetaDataImport *metaDataImport, PCCOR_SIGNATURE signature, wstring &signatureText, INT32 *pElementType);
 	
 	//Map Speichert alle Funktionen, um sie am Ende mit dem CallCount auszugeben
