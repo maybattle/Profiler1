@@ -71,6 +71,7 @@ private:
 	wstring CProfiler::GetStringValueFromArgumentRange(const COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange);
 	wstring CProfiler::GetStringValueFromArgument(ObjectID stringOID);
 	INT32 CProfiler::GetInt32ValueFromArgumentRange(const COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange);
+	INT32 CProfiler::GetInt32ValueFromArgument(UINT_PTR startAddress);
 	INT64 CProfiler::GetDateTimeValueFromArgumentRange(const COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange);
 	INT64 CProfiler::GetDateTimeValueFromArgument(UINT_PTR startAddress);
 

@@ -1,0 +1,2 @@
+- CreateDatabase erstellt die Testdatenbank, die im Beispiel SampleToAnalyzeEF_Linq2Sql verwendet wird.
+- Der ConnectionString muss in der app.config auf den richtigen Datenbank Server gesetzt werden.

@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Configuration;
-using System.Data;
-using System.Data.SqlClient;
+
 using System.Linq;
 using System.Windows;
 using Linq;
+using SampleToAnalyzeEF_Linq2Sql;
 
 
 namespace SampleToAnalyzeEF_Linq2Sql_AdoNetCalls
@@ -19,34 +18,28 @@ namespace SampleToAnalyzeEF_Linq2Sql_AdoNetCalls
             InitializeComponent();
         }
 
-        private void RunEF4SampleButton_Click(object sender, RoutedEventArgs e){
-            ResultTextBox.Text = string.Empty;
-            using (var ctx = new Test_RalfEntities()){
-                var result = ctx.Order.Where(n => n.Id > 0 && n.OrderDate>new DateTime(2012,12,21) && n.OrderName!="Order2");
-                foreach (var order in result){
-                    var line = CreateResultTextLine(order.Id, order.OrderName, order.OrderDate, order.Total);
-                    ResultTextBox.Text += line;
-                }
-            }
+private void RunEF4SampleButton_Click(object sender, RoutedEventArgs e){
+    ResultTextBox.Text = string.Empty;
+    using (var ctx = new Test_Entities()){
+        var result = ctx.Order.Where(n => n.Id > 0 && n.OrderDate>new DateTime(2012,12,21) && n.OrderName!="Order2");
+        foreach (var order in result){
+            var line = CreateResultTextLine(order.Id, order.OrderName, order.OrderDate, order.Total);
+            ResultTextBox.Text += line;
         }
+    }
+}
 
+private void RunLinq2SqlSampleButton_Click(object sender, RoutedEventArgs e){
+    ResultTextBox.Text = string.Empty;
+    using (var ctx = new OrderModelsLinqDataContext()){
+        var result = ctx.LinqOrders.Where(n => n.Id > 0 && n.OrderDate > new DateTime(2012, 12, 21) && n.OrderName != "Order2");
+        foreach (var order in result){
+            var line = CreateResultTextLine(order.Id, order.OrderName, order.OrderDate, order.Total);
+            ResultTextBox.Text += line;
+        }
+    }
+}
         
-
-        private void RunLinq2SqlSampleButton_Click(object sender, RoutedEventArgs e)
-        {
-            ResultTextBox.Text = string.Empty;
-            using (var ctx = new OrderModelsLinqDataContext())
-            {
-                var result = ctx.LinqOrders.Where(n => n.Id > 0 && n.OrderDate > new DateTime(2012, 12, 21) && n.OrderName != "Order2");
-                foreach (var order in result)
-                {
-                    var line = CreateResultTextLine(order.Id, order.OrderName, order.OrderDate, order.Total);
-                    ResultTextBox.Text += line;
-                }
-            }
-        }
-
-      
         private static string CreateResultTextLine(int id, string name, DateTime? date, decimal? total){
             return string.Format("{0} - {1} - {2} - {3}\n", id, name, 
                 date.HasValue?date.Value:DateTime.MinValue, 

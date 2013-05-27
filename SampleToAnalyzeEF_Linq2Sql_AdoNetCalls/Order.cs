@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace SampleToAnalyzeEF_Linq2Sql_AdoNetCalls
+namespace SampleToAnalyzeEF_Linq2Sql
 {
     using System;
     using System.Collections.Generic;

@@ -16,23 +16,19 @@ void __stdcall EnterGlobalWithInfo(FunctionIDOrClientID functionIDOrClientID, CO
 
 //Wird von der CLR aufgerufen
 //Manuelles sichern und Wiederherstellen der Register
-void __declspec(naked) EnterNaked3WithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
+void __declspec(naked) EnterNaked3WithInfo(FunctionIDOrClientID functionIDOrClientID, 
+										   COR_PRF_ELT_INFO eltInfo)
 {
     __asm
     {
         push ebp
-		mov ebp, esp 
+        mov ebp, esp 
         pushad
-
-		mov edx, [ebp+0x0C]
-		push edx
-
-		mov eax, [ebp+0x08]
-		push eax
-
-		call EnterGlobalWithInfo;	
-    
-	
+        mov edx, [ebp+0x0C]
+        push edx
+        mov eax, [ebp+0x08]
+        push eax
+        call EnterGlobalWithInfo;	
         popad
         pop ebp
         ret SIZE functionIDOrClientID + SIZE eltInfo
@@ -166,8 +162,7 @@ HRESULT CProfiler::Initialize(IUnknown *pICorProfilerInfoUnk)
         return E_FAIL;
     }
 
-   
-    
+      
     //Setzen des FunctionID Mappers
     //Wird von CLR aufgerufen, wenn sich FunctionIDs aendern. 
     //Es wird er Name der Funktion ermittelt und ein FunctionInformation Objekt erzeugt.
@@ -184,8 +179,7 @@ HRESULT CProfiler::Initialize(IUnknown *pICorProfilerInfoUnk)
         _pICorProfilerInfo->SetEventMask(COR_PRF_MONITOR_NONE);
         return E_FAIL;
     }
-
-    
+	    
 	//statt _pICorProfilerInfo3->SetEnterLeaveFunctionHooks3 werden jetzt die *WithInfo Funktionen als Callback verwendet.
 	hr = _pICorProfilerInfo3->SetEnterLeaveFunctionHooks3WithInfo(
 		(FunctionEnter3WithInfo*)EnterNaked3WithInfo,
@@ -206,48 +200,47 @@ HRESULT CProfiler::Initialize(IUnknown *pICorProfilerInfoUnk)
 
 void CProfiler::EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF_ELT_INFO eltInfo)
 {
-	
-	CFunctionInformation* functionInformation = NULL;
+    
+    CFunctionInformation* functionInformation = NULL;
     std::unordered_map<FunctionID, CFunctionInformation*>::iterator 
         iter = _functionInformations.find(functionIDOrClientID.functionID);
     
-	
     if (iter != _functionInformations.end())
     {
         functionInformation = (iter->second);
-		functionInformation->IncCallCount();
-		//die gleiche Funktion kann aufgrund einer Vererbungshierachie mehrmals aufgerufen werden. 
-		//Es wird nur der erste Aufruf zur Ausgabe des Parameters herangezogen werden.
-		wstring commandTextFunctionName = L"System.Data.SqlClient.SqlCommand.set_CommandText";
-		wstring parameterValue = L"System.Data.SqlClient.SqlParameter.set_Value";
-		//wstring parameterValue = L"SampleToProfile.Beamer.Beam";
+        functionInformation->IncCallCount();
+        //die gleiche Funktion kann aufgrund einer Vererbungshierachie mehrmals aufgerufen werden. 
+        //Es wird nur der erste Aufruf zur Ausgabe des Parameters herangezogen werden.
+        wstring commandTextFunctionName = L"System.Data.SqlClient.SqlCommand.set_CommandText";
+        wstring parameterValue = L"System.Data.SqlClient.SqlParameter.set_Value";
+        //wstring parameterValue = L"SampleToProfile.Beamer.Beam";
 
-		if(functionInformation->GetFunctionName().compare(commandTextFunctionName)==0 ||
-			functionInformation->GetFunctionName().compare(parameterValue)==0){
-			COR_PRF_FRAME_INFO frameInfo;
-			ULONG cbArgumentInfo=0;
-			COR_PRF_FUNCTION_ARGUMENT_INFO *pArgumentInfo;
-			//Function muss 2mal aufgerufen werden. 
-			//Das erste Mal mit cbArgumentInfo=0, pArgumentInfo=NULL
-			//als Ergebnis steht in cbArgumentInfo die Groeße des Speicherbereiches der Funktionsargumente und die Funktion liefert FAILED(hr)
-			//Das zweite Mal mit dem Ergebnis von cbArgumentInfo des ersten Aufrufs und dem entsprechend grossen Speicherbereich von pArgumentInfo
-			HRESULT hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID, eltInfo,	&frameInfo, &cbArgumentInfo,NULL);
-			if(FAILED(hr) && cbArgumentInfo>0){
-				pArgumentInfo = new COR_PRF_FUNCTION_ARGUMENT_INFO[cbArgumentInfo];
-				hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID,eltInfo,	&frameInfo, &cbArgumentInfo,pArgumentInfo);
-				if(SUCCEEDED(hr)) {
-
-					//bei nicht statischen Funktionen, wird als erstes Argument immer der this Zeiger übergeben
-					int argumentStartIndex = functionInformation->GetIsStatic()==TRUE?0:1;
-					for(int i=argumentStartIndex;i<pArgumentInfo->numRanges; i++){
-						
-						_logger->WriteStringToLogFormat("%S:\t",functionInformation->GetFunctionName().c_str());
-						switch(functionInformation->ParameterInformations[i-argumentStartIndex]->GetNativeType()){
-							case CorElementType::ELEMENT_TYPE_STRING:{
-								wstring value = GetStringValueFromArgumentRange(&(pArgumentInfo->ranges[i]));
-								_logger->WriteStringToLogFormat("%S\r\n",value.c_str());
-								break;
-							}
+        if(functionInformation->GetFunctionName().compare(commandTextFunctionName)==0 ||
+            functionInformation->GetFunctionName().compare(parameterValue)==0){
+            COR_PRF_FRAME_INFO frameInfo;
+            ULONG cbArgumentInfo=0;
+            COR_PRF_FUNCTION_ARGUMENT_INFO *pArgumentInfo;
+            //Function muss 2mal aufgerufen werden. 
+            //Das erste Aufruf mit cbArgumentInfo=0, pArgumentInfo=NULL
+            //als Ergebnis steht in cbArgumentInfo die Groeße des Speicherbereiches der Funktionsargumente und die Funktion liefert FAILED(hr)
+            //Der zweite Aufruf mit dem Ergebnis von cbArgumentInfo des ersten Aufrufs und dem entsprechend grossen Speicherbereich von pArgumentInfo
+            HRESULT hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID, eltInfo,	&frameInfo, &cbArgumentInfo,NULL);
+            if(FAILED(hr) && cbArgumentInfo>0){
+                pArgumentInfo = new COR_PRF_FUNCTION_ARGUMENT_INFO[cbArgumentInfo];
+                hr=_pICorProfilerInfo3->GetFunctionEnter3Info(functionIDOrClientID.functionID,eltInfo,	&frameInfo, &cbArgumentInfo,pArgumentInfo);
+                if(SUCCEEDED(hr)) {
+                    
+                    //bei nicht statischen Funktionen, wird als erstes Argument immer der this Zeiger übergeben
+                    int argumentStartIndex = functionInformation->GetIsStatic()==TRUE?0:1;
+                    for(int i=argumentStartIndex;i<pArgumentInfo->numRanges; i++){
+                        
+                        _logger->WriteStringToLogFormat("%S:\t",functionInformation->GetFunctionName().c_str());
+                        switch(functionInformation->ParameterInformations[i-argumentStartIndex]->GetNativeType()){
+                            case CorElementType::ELEMENT_TYPE_STRING:{
+                                wstring value = GetStringValueFromArgumentRange(&(pArgumentInfo->ranges[i]));
+                                _logger->WriteStringToLogFormat("%S\r\n",value.c_str());
+                                break;
+                            }
 						
 							case CorElementType::ELEMENT_TYPE_I4:{
 								INT32 value = GetInt32ValueFromArgumentRange(&(pArgumentInfo->ranges[i]));
@@ -273,10 +266,6 @@ void CProfiler::EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF
 									hr = _pICorProfilerInfo3->GetClassFromObject(objectID, &classID);
 									if(FAILED(hr)) continue;
 
-									ULONG32 pBufferOffset;
-									hr = _pICorProfilerInfo3->GetBoxClassLayout(classID, &pBufferOffset);
-									//hier nicht auf FAILED pruefen, da bei einem String HRESULT != 0 zureuck kommt
-
 									ModuleID ModuleID;
 									mdTypeDef mdTypeDefToken;
 									_pICorProfilerInfo3->GetClassIDInfo(classID,&ModuleID, &mdTypeDefToken);
@@ -290,12 +279,15 @@ void CProfiler::EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF
 									if(pIMetaDataImport!=NULL) pIMetaDataImport->Release();
 									if(FAILED(hr)) continue;
 									
+									ULONG32 pBufferOffset;
+									hr = _pICorProfilerInfo3->GetBoxClassLayout(classID, &pBufferOffset);
+									//hier nicht auf FAILED pruefen, da bei einem String HRESULT != 0 ist
 
 									wstring typeName = szClass; 
 									
 									if(typeName.compare(L"System.Int32")==0){
 										INT32 value;
-										memcpy(&value,((const void*)(objectID+pBufferOffset)),sizeof(INT32));
+										value = GetInt32ValueFromArgument(objectID+pBufferOffset);
 										_logger->WriteStringToLogFormat("%S\t%d\r\n",typeName.c_str(),value);
 									}
 
@@ -321,8 +313,6 @@ void CProfiler::EnterWithInfo(FunctionIDOrClientID functionIDOrClientID, COR_PRF
 				}
 			}
 		}
-
-   
     }
     else _logger->WriteStringToLogFormat("Function:%i not found.", functionIDOrClientID);
     _callStackSize++;
@@ -406,8 +396,12 @@ wstring CProfiler::GetStringValueFromArgument(ObjectID stringOID){
 
 INT32 CProfiler::GetInt32ValueFromArgumentRange(const COR_PRF_FUNCTION_ARGUMENT_RANGE *argumentRange){
 	if(argumentRange== NULL) return MININT32;
+	return GetInt32ValueFromArgument(argumentRange->startAddress);
+}
+
+INT32 CProfiler::GetInt32ValueFromArgument(UINT_PTR startAddress){
 	INT32 value;
-	memcpy(&value,(void*)argumentRange->startAddress,argumentRange->length);
+	value = *(INT32*)startAddress;
 	return value;
 }
 
@@ -419,8 +413,10 @@ INT64 CProfiler::GetDateTimeValueFromArgumentRange(const COR_PRF_FUNCTION_ARGUME
 INT64 CProfiler::GetDateTimeValueFromArgument(UINT_PTR startAddress){
 	INT64 value;
 	value=	*(INT64*)(startAddress);
-	//siehe DateTime Implementierung Rotor CLI 
+	//siehe DateTime Implementierung Microsoft  
 	value = value & 0x3FFFFFFFFFFFFFFF;
+	//Value ist Anzahl der Ticks (100 Nanosekunden Intervalle) seit dem 01.1.0001
+	//http://msdn.microsoft.com/de-de/library/system.datetime.ticks.aspx
 	return value;
 }
 
@@ -428,13 +424,9 @@ INT64 CProfiler::GetDateTimeValueFromArgument(UINT_PTR startAddress){
 ///Von der CLR aufgerufen, wenn der Profiler beendet wird.
 STDMETHODIMP CProfiler::Shutdown()
 {
-	//_logger->WriteStringToLogFormat("Write full function list\r\n"); 
 	std::unordered_map<FunctionID, CFunctionInformation*>::iterator i;
 	for (i = _functionInformations.begin(); i != _functionInformations.end(); i++){
 		CFunctionInformation* functionCharacteristics = i->second;
-		//_logger->WriteStringToLogFormat("%S : call count = %d\r\n", 
-			//functionCharacteristics->GetFunctionName().c_str(),
-			//functionCharacteristics->GetCallCount());
 		delete i->second;
 	}
 	_functionInformations.clear();
@@ -550,7 +542,8 @@ CFunctionInformation* CProfiler::GetFunctionInformation(FunctionID functionId)
     return characteristics;
 }
 
-
+//http://www.microsoft.com/en-us/download/details.aspx?id=16273
+//http://clrprofiler.codeplex.com/wikipage?title=Writing%20My%20Own%20Profiler&referringTitle=Home
 PCCOR_SIGNATURE CProfiler::ParseElementType(IMetaDataImport *metaDataImport, PCCOR_SIGNATURE signature, wstring &signatureText, INT32 *pElementType)
 {	
 	COR_SIGNATURE corSignature = *signature++;
@@ -753,82 +746,6 @@ PCCOR_SIGNATURE CProfiler::ParseElementType(IMetaDataImport *metaDataImport, PCC
 }
 
 
-
-
-//void CProfiler::PrintFunctionArguments (FunctionID functionId, COR_PRF_FRAME_INFO func, COR_PRF_FUNCTION_ARGUMENT_RANGE* range)
-//{
-//	
-//	IMetaDataImport * pIMetaDataImport = 0;
-//	HRESULT hr = S_OK;
-//	mdToken funcToken = 0;
-//
-//	hr = m_pICorProfilerInfo->GetTokenAndMetaDataFromFunction (functionId,
-//    															IID_IMetaDataImport,
-//																(LPUNKNOWN *) &pIMetaDataImport,
-//																&funcToken);
-//
-//	if(SUCCEEDED(hr))
-//	{
-//		mdTypeDef memberClass;
-//		DWORD dwAttr;
-//		PCCOR_SIGNATURE pMethodSigBlob;
-//		ULONG cbMethodSigBlob;
-//		ULONG ulCodeRVA = 0;
-//		DWORD dwImplFlags = 0;
-//	    
-//		hr = pIMetaDataImport->GetMethodProps (funcToken,
-//												&memberClass,
-//												g_szMethodName,
-//												NAME_BUFFER_SIZE,
-//												NULL,
-//												&dwAttr,
-//												&pMethodSigBlob, 
-//												&cbMethodSigBlob,
-//												&ulCodeRVA, 
-//												&dwImplFlags);
-//
-//		// Now crack open the sig
-//
-//        // Get the number of parameters,skip past callconv
-//        ULONG numberParams = ( *((PBYTE)pMethodSigBlob + 1) );
-//		PBYTE pParamStart = (PBYTE)pMethodSigBlob + 2;
-//		PBYTE pCurrent = pParamStart;
-//
-//		// NOTE: THIS ASSUMES ONE RANGE FOR SIMPLICITY
-//		PBYTE pValues = (PBYTE)range->startAddress;
-//
-//        // Now loop through all of the params
-//        for (ULONG i=0; i<numberParams; i++)
-//        {
-//			// skip over custommod
-//			pCurrent++;
-//
-//			PCCOR_SIGNATURE pWorkingSig = (PCCOR_SIGNATURE)pCurrent;
-//			// get the token type of this signature
-//			CorElementType type = (CorElementType)CorSigUncompressData( pWorkingSig );
-//
-//			// hack for signature cracking arrays
-//			if((*pWorkingSig) == 0x1d) //ELEMENT_TYPE_SZARRAY
-//				type = ELEMENT_TYPE_SZARRAY;
-//
-//			char typeString[128];
-//			typeString[0]=0x00;
-//			GetElementTypeString(type,typeString);
-//			if(typeString[0] != 0x00)
-//			{
-//				LogString("\t\t\tNumberParams[%d]\tParameter[%d] is of type (0x%08X) %s\r\n",numberParams,i,type,typeString);
-//			}
-//			//PrintParameterValue(i,type,pValues);
-//        }
-//
-//
-//		pIMetaDataImport->Release();
-//	}
-//}
-
-
-
-
 //Setzen der Events, an denen man interessiert ist. 
 //Aktuell wird nur das COR_PRF_MONITOR_ENTERLEAVE verwendet
 //um die Funktionsaufrufe zu tracen
@@ -869,10 +786,14 @@ HRESULT CProfiler::SetEventMask()
     //COR_PRF_ALL	= 0x3fffffff,
     //COR_PRF_MONITOR_IMMUTABLE	= COR_PRF_MONITOR_CODE_TRANSITIONS | COR_PRF_MONITOR_REMOTING | COR_PRF_MONITOR_REMOTING_COOKIE | COR_PRF_MONITOR_REMOTING_ASYNC | COR_PRF_MONITOR_GC | COR_PRF_ENABLE_REJIT | COR_PRF_ENABLE_INPROC_DEBUGGING | COR_PRF_ENABLE_JIT_MAPS | COR_PRF_DISABLE_OPTIMIZATIONS | COR_PRF_DISABLE_INLINING | COR_PRF_ENABLE_OBJECT_ALLOCATED | COR_PRF_ENABLE_FUNCTION_ARGS | COR_PRF_ENABLE_FUNCTION_RETVAL | COR_PRF_ENABLE_FRAME_INFO | COR_PRF_ENABLE_STACK_SNAPSHOT | COR_PRF_USE_PROFILE_IMAGES
     
-    DWORD eventMask = (DWORD) (COR_PRF_MONITOR_ENTERLEAVE | COR_PRF_ENABLE_FUNCTION_ARGS | COR_PRF_ENABLE_FUNCTION_RETVAL);
-    _logger->WriteStringToLogFormat("Set EventMask to COR_PRF_MONITOR_ENTERLEAVE | COR_PRF_ENABLE_FUNCTION_ARGS | COR_PRF_ENABLE_FUNCTION_RETVAL\r\n");
-
+    DWORD eventMask = (DWORD) (COR_PRF_MONITOR_ENTERLEAVE 
+								| COR_PRF_ENABLE_FUNCTION_ARGS 
+								| COR_PRF_ENABLE_FUNCTION_RETVAL
+							  );
+	
+	_logger->WriteStringToLogFormat("Set EventMask to COR_PRF_MONITOR_ENTERLEAVE | COR_PRF_ENABLE_FUNCTION_ARGS | COR_PRF_ENABLE_FUNCTION_RETVAL\r\n");
     return _pICorProfilerInfo3->SetEventMask(eventMask);
 }
+
 
 

@@ -10,20 +10,22 @@ namespace SampleToProfile
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Beam me up, scotty!");
+            Console.WriteLine("BeamUp me up, scotty!");
             var beamer = new Beamer();
             beamer.Start("Beamer is active.");
             Console.WriteLine("Press Enter to stop beaming.");
             var state = beamer.GetBeamerState();
             Console.WriteLine(state);
-            beamer.Beam("James T. Kirk");
+            beamer.SetNumberOfHumansToBeam(1);
+            beamer.BeamUp("James T. Kirk");
             Console.ReadLine();
         }
     }
 
 
-    public class Beamer
-    {
+    public class Beamer{
+        private int _numberOfHumans;
+
         public void Start(string message)
         {
             Console.WriteLine(message);
@@ -33,8 +35,12 @@ namespace SampleToProfile
             return "Beamer is OK.";
         }
 
-        public object Beam(object objectToBeam){
+        public object BeamUp(object objectToBeam){
             return objectToBeam;
+        }
+
+        public void SetNumberOfHumansToBeam(object numberOfHumans){
+            _numberOfHumans = Convert.ToInt32(numberOfHumans);
         }
     }
 }

@@ -7,23 +7,23 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace SampleToAnalyzeEF_Linq2Sql_AdoNetCalls
+namespace SampleToAnalyzeEF_Linq2Sql
 {
     using System;
     using System.Data.Entity;
     using System.Data.Entity.Infrastructure;
     
-    public partial class Test_RalfEntities : DbContext
+    public partial class Test_Entities : DbContext
     {
-        public Test_RalfEntities()
-            : base("name=Test_RalfEntities")
+        public Test_Entities()
+            : base("name=Test_Entities")
         {
         }
     
-        //protected override void OnModelCreating(DbModelBuilder modelBuilder)
-        //{
-        //    throw new UnintentionalCodeFirstException();
-        //}
+        protected override void OnModelCreating(DbModelBuilder modelBuilder)
+        {
+            throw new UnintentionalCodeFirstException();
+        }
     
         public DbSet<Order> Order { get; set; }
     }

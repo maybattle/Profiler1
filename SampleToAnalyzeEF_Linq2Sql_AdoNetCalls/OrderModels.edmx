@@ -21,9 +21,9 @@
     </edmx:StorageModels>
     <!-- CSDL content -->
     <edmx:ConceptualModels>
-      <Schema Namespace="Test_RalfModel.EF" Alias="Self" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns="http://schemas.microsoft.com/ado/2008/09/edm">
-        <EntityContainer Name="Test_RalfEntities" annotation:LazyLoadingEnabled="true">
-          <EntitySet Name="Order" EntityType="Test_RalfModel.EF.Order" />
+      <Schema Namespace="Test_Model.EF" Alias="Self" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns="http://schemas.microsoft.com/ado/2008/09/edm">
+        <EntityContainer Name="Test_Entities" annotation:LazyLoadingEnabled="true">
+          <EntitySet Name="Order" EntityType="Test_Model.EF.Order" />
         </EntityContainer>
         <EntityType Name="Order">
           <Key>
@@ -39,9 +39,9 @@
     <!-- C-S mapping content -->
     <edmx:Mappings>
       <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2008/09/mapping/cs">
-        <EntityContainerMapping StorageEntityContainer="Test_RalfModelStoreContainer" CdmEntityContainer="Test_RalfEntities">
+        <EntityContainerMapping StorageEntityContainer="Test_RalfModelStoreContainer" CdmEntityContainer="Test_Entities">
           <EntitySetMapping Name="Order">
-            <EntityTypeMapping TypeName="Test_RalfModel.EF.Order">
+            <EntityTypeMapping TypeName="Test_Model.EF.Order">
               <MappingFragment StoreEntitySet="Order">
                 <ScalarProperty Name="Id" ColumnName="Id" />
                 <ScalarProperty Name="OrderName" ColumnName="OrderName" />

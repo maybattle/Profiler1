@@ -7,7 +7,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Profiler1LauncherNet", "Pro
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleToProfile_CLR4_x86", "SampleToProfile_CLR4_x86\SampleToProfile_CLR4_x86.csproj", "{4FF99F85-551C-4309-AD3E-48D45BA25AC4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleToAnalyzeEF_Linq2Sql_AdoNetCalls", "SampleToAnalyzeEF_Linq2Sql_AdoNetCalls\SampleToAnalyzeEF_Linq2Sql_AdoNetCalls.csproj", "{31939535-ECB9-405A-9198-BCCD0DE90B90}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleToAnalyzeEF_Linq2Sql", "SampleToAnalyzeEF_Linq2Sql_AdoNetCalls\SampleToAnalyzeEF_Linq2Sql.csproj", "{31939535-ECB9-405A-9198-BCCD0DE90B90}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ReadmeAndDbScript", "ReadmeAndDbScript", "{34DAA753-257B-4EF9-9726-B11338689574}"
+	ProjectSection(SolutionItems) = preProject
+		CreateDatabase.sql = CreateDatabase.sql
+		Readme.txt = Readme.txt
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

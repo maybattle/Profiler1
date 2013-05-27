@@ -4,8 +4,8 @@
   <edmx:Designer xmlns="http://schemas.microsoft.com/ado/2008/10/edmx">
     <!-- Diagram content (shape and connector positions) -->
     <edmx:Diagrams>
-      <Diagram DiagramId="d6a587f8720f4c50be0cecf6549fd6fe" Name="Diagram1" ZoomLevel="10">
-        <EntityTypeShape EntityType="Test_RalfModel.EF.Order" Width="12.5" PointX="12.375" PointY="15.25" IsExpanded="true" />
+      <Diagram DiagramId="d6a587f8720f4c50be0cecf6549fd6fe" Name="Diagram1" ZoomLevel="100">
+        <EntityTypeShape EntityType="Test_Model.EF.Order" Width="2" PointX="14.875" PointY="3.5" IsExpanded="true" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

@@ -1,16 +1,16 @@
 #pragma once
 #include "stdafx.h"
 
-CParameterInformation::CParameterInformation(const wstring name, CorElementType nativeType, INT32 position, ParameterDirection direction, BOOL isReturnValue)
+CParameterInformation::CParameterInformation(const wstring typeName, CorElementType nativeType, INT32 position, ParameterDirection direction, BOOL isReturnValue)
 {
-	_name = name;
+	_typeName = typeName;
 	_nativeType = nativeType;
 	_position = position;
 	_direction = direction;
 	_isReturnValue = isReturnValue;
 }
 
-const wstring CParameterInformation::GetName() { return _name;};
+const wstring CParameterInformation::GetName() { return _typeName;};
 
 CorElementType CParameterInformation::GetNativeType(){return _nativeType;}
 
