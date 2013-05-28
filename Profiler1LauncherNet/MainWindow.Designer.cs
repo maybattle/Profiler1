@@ -32,18 +32,19 @@
             this.SelectApplicationButton = new System.Windows.Forms.Button();
             this.StartProfilingButton = new System.Windows.Forms.Button();
             this.SelectProcessToProfileFileDialog = new System.Windows.Forms.OpenFileDialog();
+            this.MessageLabel = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // SelectedProcessToProfileTextbox
             // 
             this.SelectedProcessToProfileTextbox.Location = new System.Drawing.Point(13, 13);
             this.SelectedProcessToProfileTextbox.Name = "SelectedProcessToProfileTextbox";
-            this.SelectedProcessToProfileTextbox.Size = new System.Drawing.Size(243, 20);
+            this.SelectedProcessToProfileTextbox.Size = new System.Drawing.Size(416, 20);
             this.SelectedProcessToProfileTextbox.TabIndex = 0;
             // 
             // SelectApplicationButton
             // 
-            this.SelectApplicationButton.Location = new System.Drawing.Point(274, 9);
+            this.SelectApplicationButton.Location = new System.Drawing.Point(435, 10);
             this.SelectApplicationButton.Name = "SelectApplicationButton";
             this.SelectApplicationButton.Size = new System.Drawing.Size(135, 23);
             this.SelectApplicationButton.TabIndex = 1;
@@ -53,7 +54,7 @@
             // 
             // StartProfilingButton
             // 
-            this.StartProfilingButton.Location = new System.Drawing.Point(274, 38);
+            this.StartProfilingButton.Location = new System.Drawing.Point(435, 39);
             this.StartProfilingButton.Name = "StartProfilingButton";
             this.StartProfilingButton.Size = new System.Drawing.Size(135, 23);
             this.StartProfilingButton.TabIndex = 2;
@@ -66,11 +67,26 @@
             this.SelectProcessToProfileFileDialog.Filter = ".Net Executables|*.exe";
             this.SelectProcessToProfileFileDialog.Title = "Select process";
             // 
+            // MessageLabel
+            // 
+            this.MessageLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.MessageLabel.AutoSize = true;
+            this.MessageLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.MessageLabel.ForeColor = System.Drawing.SystemColors.Highlight;
+            this.MessageLabel.Location = new System.Drawing.Point(13, 109);
+            this.MessageLabel.Name = "MessageLabel";
+            this.MessageLabel.Size = new System.Drawing.Size(65, 17);
+            this.MessageLabel.TabIndex = 3;
+            this.MessageLabel.Text = "Message";
+            // 
             // MainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(447, 256);
+            this.ClientSize = new System.Drawing.Size(582, 256);
+            this.Controls.Add(this.MessageLabel);
             this.Controls.Add(this.StartProfilingButton);
             this.Controls.Add(this.SelectApplicationButton);
             this.Controls.Add(this.SelectedProcessToProfileTextbox);
@@ -87,6 +103,7 @@
         private System.Windows.Forms.Button SelectApplicationButton;
         private System.Windows.Forms.Button StartProfilingButton;
         private System.Windows.Forms.OpenFileDialog SelectProcessToProfileFileDialog;
+        private System.Windows.Forms.Label MessageLabel;
     }
 }
 

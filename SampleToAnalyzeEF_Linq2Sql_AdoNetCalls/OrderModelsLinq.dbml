@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?><Database Name="Test_Ralf" EntityNamespace="Linq" ContextNamespace="Linq" Class="OrderModelsLinqDataContext" xmlns="http://schemas.microsoft.com/linqtosql/dbml/2007">
-  <Connection Mode="AppSettings" ConnectionString="Data Source=test.sql.id.jack-wolfskin.de;Initial Catalog=TestDb;Integrated Security=True" SettingsObjectName="SampleToAnalyzeEF_Linq2Sql.Properties.Settings" SettingsPropertyName="Test_RalfConnectionString" Provider="System.Data.SqlClient" />
+  <Connection Mode="AppSettings" ConnectionString="Data Source=test.sql.id.jack-wolfskin.de;Initial Catalog=Test_Ralf;Integrated Security=True" SettingsObjectName="SampleToAnalyzeEF_Linq2Sql.Properties.Settings" SettingsPropertyName="TestDbConnectionString" Provider="System.Data.SqlClient" />
   <Table Name="dbo.[Order]" Member="LinqOrders">
     <Type Name="LinqOrder">
       <Column Name="Id" Type="System.Int32" DbType="Int NOT NULL IDENTITY" IsPrimaryKey="true" IsDbGenerated="true" CanBeNull="false" />

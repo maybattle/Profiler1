@@ -26,11 +26,9 @@ namespace SampleToAnalyzeEF_Linq2Sql.Properties {
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.SpecialSettingAttribute(global::System.Configuration.SpecialSetting.ConnectionString)]
-        [global::System.Configuration.DefaultSettingValueAttribute("Data Source=test.sql.id.jack-wolfskin.de;Initial Catalog=Test_Ralf;Integrated Sec" +
-            "urity=True")]
-        public string Test_RalfConnectionString {
+        public string TestDbConnectionString {
             get {
-                return ((string)(this["Test_RalfConnectionString"]));
+                return ((string)(this["TestDbConnectionString"]));
             }
         }
     }

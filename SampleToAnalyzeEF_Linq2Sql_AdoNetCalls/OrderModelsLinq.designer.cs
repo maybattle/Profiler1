@@ -36,7 +36,7 @@ namespace Linq
     #endregion
 		
 		public OrderModelsLinqDataContext() : 
-				base(global::SampleToAnalyzeEF_Linq2Sql.Properties.Settings.Default.Test_RalfConnectionString, mappingSource)
+				base(global::SampleToAnalyzeEF_Linq2Sql.Properties.Settings.Default.TestDbConnectionString, mappingSource)
 		{
 			OnCreated();
 		}
